@@ -23,7 +23,7 @@ async function bootstrap() {
 
   // app.use(morgan('dev'));
   app.enableCors();
-  app.setGlobalPrefix('/kindergarden/api/v1');
+  app.setGlobalPrefix('/api/v1/kindergarden');
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.useGlobalInterceptors(new ResponseInterceptor());
 
@@ -43,7 +43,7 @@ async function bootstrap() {
       const url = req.originalUrl;
       const status = res.statusCode;
 
-      if (url.includes('swagger')) return;
+      // if (url.includes('swagger')) return;
 
       const logObject: any = {};
       if (Object.keys(req.query).length) logObject.query = req.query;
@@ -80,7 +80,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('kindergarden/api/swagger', app, document);
+  SwaggerModule.setup('api/v1/kindergarden/swagger', app, document);
 
   await app.listen(port);
 

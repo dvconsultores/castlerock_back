@@ -49,7 +49,7 @@ async function bootstrap() {
       const logObject: any = {};
       if (Object.keys(req.query).length) logObject.query = req.query;
       if (Object.keys(req.params).length) logObject.params = req.params;
-      if (Object.keys(req.body).length) {
+      if (req.body && Object.keys(req.body).length) {
         const filteredBody = { ...req.body };
         if ('password' in filteredBody) filteredBody.password = '********';
         logObject.body = filteredBody;

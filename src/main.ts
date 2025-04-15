@@ -23,7 +23,7 @@ async function bootstrap() {
 
   // app.use(morgan('dev'));
   app.enableCors();
-  app.setGlobalPrefix('/kindergarden/api/v1');
+  app.setGlobalPrefix('/api/v1');
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.useGlobalInterceptors(new ResponseInterceptor());
 
@@ -80,7 +80,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('kindergarden/api/v1/swagger', app, document);
+  SwaggerModule.setup('/api/v1/swagger', app, document);
 
   await app.listen(port);
 

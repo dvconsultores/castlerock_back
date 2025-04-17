@@ -20,7 +20,7 @@ async function bootstrap() {
   });
 
   app.enableCors();
-  const globalPrefix = '/kindergarden/api/v1';
+  const globalPrefix = '/api/v1';
 
   app.setGlobalPrefix(globalPrefix);
   app.useGlobalPipes(new ValidationPipe({ transform: true }));

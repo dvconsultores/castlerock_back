@@ -1,19 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { NestApplicationOptions, ValidationPipe } from '@nestjs/common';
-import * as morgan from 'morgan';
+import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppLogger } from './shared/logger/app-logger';
 import { ResponseInterceptor } from './helpers/interceptors/response.interceptor';
-import { ThrottlerGuard } from '@nestjs/throttler';
 
 process.loadEnvFile();
 
 async function bootstrap() {
   const configService = new ConfigService();
 
-  const port = configService.get('PORT');
+  const port = configService.get('PORT') || 3010;
 
   const logger = new AppLogger();
 
@@ -21,9 +19,10 @@ async function bootstrap() {
     logger: logger,
   });
 
-  // app.use(morgan('dev'));
   app.enableCors();
   const globalPrefix = '/api/v1';
+  const proxyPrefix = '/kindergarden'; // <-- the external path under Apache
+
   app.setGlobalPrefix(globalPrefix);
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.useGlobalInterceptors(new ResponseInterceptor());
@@ -43,8 +42,6 @@ async function bootstrap() {
       const method = req.method;
       const url = req.originalUrl;
       const status = res.statusCode;
-
-      // if (url.includes('swagger')) return;
 
       const logObject: any = {};
       if (Object.keys(req.query).length) logObject.query = req.query;
@@ -73,6 +70,7 @@ async function bootstrap() {
     next();
   });
 
+  // Swagger setup
   const config = new DocumentBuilder()
     .setTitle('Kindergarten API')
     .setDescription('Kindergarten API Documentation')
@@ -81,12 +79,22 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup(`${globalPrefix}/swagger`, app, document);
+
+  // Serve the Swagger JSON at a fixed path that matches your Apache proxy
+  app.use(`${proxyPrefix}${globalPrefix}/swagger-json`, (req, res) => {
+    res.json(document);
+  });
+
+  // Swagger UI setup: tell it where to load the JSON
+  SwaggerModule.setup(`${globalPrefix}/swagger`, app, document, {
+    swaggerOptions: {
+      url: `${proxyPrefix}${globalPrefix}/swagger-json`,
+    },
+  });
 
   await app.listen(port);
 
   const url = await app.getUrl();
-
   logger.log(`Server is running on ${url}`);
 }
 

@@ -20,8 +20,7 @@ async function bootstrap() {
   });
 
   app.enableCors();
-  const globalPrefix = '/api/v1';
-  const proxyPrefix = '/kindergarden'; // <-- the external path under Apache
+  const globalPrefix = '/kindergarden/api/v1';
 
   app.setGlobalPrefix(globalPrefix);
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
@@ -70,7 +69,7 @@ async function bootstrap() {
     next();
   });
 
-  // Swagger setup
+  // Swagger config
   const config = new DocumentBuilder()
     .setTitle('Kindergarten API')
     .setDescription('Kindergarten API Documentation')
@@ -80,15 +79,16 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
 
-  // Serve the Swagger JSON at a fixed path that matches your Apache proxy
-  app.use(`${proxyPrefix}${globalPrefix}/swagger-json`, (req, res) => {
-    res.json(document);
+  // Serve raw JSON at `/kindergarden/api/v1/swagger-json`
+  app.use(`${globalPrefix}/swagger-json`, (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(document);
   });
 
-  // Swagger UI setup: tell it where to load the JSON
+  // Setup Swagger UI and tell it where to fetch the JSON from
   SwaggerModule.setup(`${globalPrefix}/swagger`, app, document, {
     swaggerOptions: {
-      url: `${proxyPrefix}${globalPrefix}/swagger-json`,
+      url: `${globalPrefix}/swagger-json`,
     },
   });
 

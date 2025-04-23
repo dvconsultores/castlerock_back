@@ -1,19 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { NestApplicationOptions, ValidationPipe } from '@nestjs/common';
-import * as morgan from 'morgan';
+import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppLogger } from './shared/logger/app-logger';
 import { ResponseInterceptor } from './helpers/interceptors/response.interceptor';
-import { ThrottlerGuard } from '@nestjs/throttler';
 
 process.loadEnvFile();
 
 async function bootstrap() {
   const configService = new ConfigService();
 
-  const port = configService.get('PORT');
+  const port = configService.get('PORT') || 3010;
 
   const logger = new AppLogger();
 
@@ -21,7 +19,6 @@ async function bootstrap() {
     logger: logger,
   });
 
-  // app.use(morgan('dev'));
   app.enableCors();
   app.setGlobalPrefix('/api/v1');
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
@@ -43,12 +40,10 @@ async function bootstrap() {
       const url = req.originalUrl;
       const status = res.statusCode;
 
-      // if (url.includes('swagger')) return;
-
       const logObject: any = {};
       if (Object.keys(req.query).length) logObject.query = req.query;
       if (Object.keys(req.params).length) logObject.params = req.params;
-      if (Object.keys(req.body).length) {
+      if (req.body && Object.keys(req.body).length) {
         const filteredBody = { ...req.body };
         if ('password' in filteredBody) filteredBody.password = '********';
         logObject.body = filteredBody;
@@ -72,6 +67,7 @@ async function bootstrap() {
     next();
   });
 
+  // Swagger config
   const config = new DocumentBuilder()
     .setTitle('Kindergarten API')
     .setDescription('Kindergarten API Documentation')
@@ -85,7 +81,6 @@ async function bootstrap() {
   await app.listen(port);
 
   const url = await app.getUrl();
-
   logger.log(`Server is running on ${url}`);
 }
 

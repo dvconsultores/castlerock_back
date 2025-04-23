@@ -72,11 +72,12 @@ async function bootstrap() {
     .setTitle('Kindergarten API')
     .setDescription('Kindergarten API Documentation')
     .setVersion('1.0')
+    .addServer('/kindergarden')
     .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('swagger', app, document);
+  SwaggerModule.setup('kindergarden/api/swagger', app, document);
 
   await app.listen(port);
 

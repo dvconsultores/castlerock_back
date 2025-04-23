@@ -67,7 +67,6 @@ async function bootstrap() {
     next();
   });
 
-  // Swagger config
   const config = new DocumentBuilder()
     .setTitle('Kindergarten API')
     .setDescription('Kindergarten API Documentation')
@@ -77,7 +76,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('kindergarden/api/swagger', app, document);
+  SwaggerModule.setup('api/swagger', app, document);
 
   await app.listen(port);
 

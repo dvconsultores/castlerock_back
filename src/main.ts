@@ -71,7 +71,7 @@ async function bootstrap() {
     .setTitle('Kindergarten API')
     .setDescription('Kindergarten API Documentation')
     .setVersion('1.0')
-    .addServer('/kindergarten')
+    // .addServer('/kindergarten')
     .addBearerAuth()
     .build();
 

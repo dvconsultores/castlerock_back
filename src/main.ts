@@ -79,8 +79,8 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/swagger', app, document);
 
-  // await app.listen(port);
-  await app.listen(port, '0.0.0.0');
+  await app.listen(port);
+  // await app.listen(port, '0.0.0.0');
 
   const url = await app.getUrl();
   logger.log(`Server is running on ${url}`);

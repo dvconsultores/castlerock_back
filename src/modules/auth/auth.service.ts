@@ -18,6 +18,7 @@ import { TeacherService } from '../teacher/services/teacher.service';
 import { UserRole } from '../../shared/enums/user-role.enum';
 import { CampusEntity } from '../campus/entities/campus.entity';
 import { AppLogger } from '../../shared/logger/app-logger';
+import { MailService } from '../../shared/mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -26,6 +27,7 @@ export class AuthService {
     private readonly campusService: CampusService,
     private readonly teacherService: TeacherService,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) {}
 
   private async validateUser(email: string, password: string): Promise<UserEntity | null> {
@@ -86,9 +88,18 @@ export class AuthService {
     const otp = Math.floor(100000 + Math.random() * 900000);
     const token = otp.toString();
 
-    await this.userService.update(user.id, { resetToken: token });
+    await this.userService.update(user.id, { resetToken: token, resetTokenAt: new Date() });
 
     console.log(`Send email to ${email} with reset token: ${token}`);
+
+    this.mailService.sendEmail({
+      to: email,
+      subject: 'Password Reset',
+      template: './reset-password-en',
+      context: {
+        otp: token,
+      },
+    });
 
     return { message: 'Reset token sent to email' };
   }
@@ -100,7 +111,20 @@ export class AuthService {
 
     if (user.resetToken !== token) throw new BadRequestException('Invalid token');
 
+    if (!user.resetTokenAt) {
+      throw new BadRequestException('Invalid or missing token timestamp');
+    }
+
+    const now = new Date();
+
+    const tokenAge = now.getTime() - new Date(user.resetTokenAt).getTime();
+
+    if (tokenAge > 60 * 60 * 1000) {
+      throw new BadRequestException('Token has expired');
+    }
+
     user.resetToken = null as any;
+    user.resetTokenAt = null as any;
     user.password = newPassword;
 
     await this.userService.save(user);

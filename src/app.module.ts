@@ -19,6 +19,7 @@ import { PlanningModule } from './modules/planning/planning.module';
 import { LoggerModule } from './shared/logger/logger.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { MailModule } from './shared/mail/mail.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { APP_GUARD } from '@nestjs/core';
     StudentModule,
     ClassModule,
     PlanningModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [

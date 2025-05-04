@@ -10,13 +10,17 @@ import {
   Query,
   Put,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { CreateClassDto, UpdateClassDto } from '../dto/class.dto';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ClassDto, CreateClassDto, UpdateClassDto } from '../dto/class.dto';
 import { ClassService } from '../services/class.service';
 import { AuthGuard } from '../../../helpers/guards/auth.guard';
 import { UserRole } from '../../../shared/enums/user-role.enum';
 import { Roles } from '../../../helpers/decorators/roles.decorator';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Multer } from 'multer';
 
 @ApiTags('Classs')
 @Controller('classs')
@@ -27,8 +31,28 @@ export class ClassController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async create(@Body() body: CreateClassDto) {
-    return this.classService.create(body);
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Sube una imagen de la clase',
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  async create(@Body() body: CreateClassDto, @UploadedFile() image: Multer.File) {
+    console.log('image', image);
+    const classData: ClassDto = {
+      ...body,
+      image: image ? image.path : null,
+    };
+
+    return this.classService.create(classData);
   }
 
   @Get()

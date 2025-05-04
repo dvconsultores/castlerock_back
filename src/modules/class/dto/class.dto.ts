@@ -11,6 +11,7 @@ import {
   MinLength,
   IsNumber,
 } from 'class-validator';
+import { ProgramType } from '../../../shared/enums/program-type.enum';
 
 export class CreateClassDto {
   @ApiProperty()
@@ -27,6 +28,18 @@ export class CreateClassDto {
   @IsNotEmpty()
   @IsNumber()
   campus: number;
+
+  @ApiProperty({ enum: ProgramType })
+  @IsNotEmpty()
+  @IsEnum(ProgramType)
+  program: ProgramType;
+}
+
+export class ClassDto extends CreateClassDto {
+  @ApiProperty()
+  @IsOptional()
+  @IsString()
+  image?: string;
 }
 
 export class UpdateClassDto {
@@ -44,4 +57,9 @@ export class UpdateClassDto {
   @IsOptional()
   @IsNumber()
   campus?: number;
+
+  @ApiProperty({ enum: ProgramType })
+  @IsOptional()
+  @IsEnum(ProgramType)
+  program?: ProgramType;
 }

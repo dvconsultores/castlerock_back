@@ -22,8 +22,8 @@ import { Roles } from '../../../helpers/decorators/roles.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Multer } from 'multer';
 
-@ApiTags('Classs')
-@Controller('classs')
+@ApiTags('Classes')
+@Controller('classes')
 export class ClassController {
   constructor(private readonly classService: ClassService) {}
 

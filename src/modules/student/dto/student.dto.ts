@@ -1,4 +1,4 @@
-import { IsString, IsDate, IsEnum, IsOptional, IsArray, ValidateNested, IsUUID } from 'class-validator';
+import { IsString, IsDate, IsEnum, IsOptional, IsArray, ValidateNested, IsUUID, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { DayOfWeekEnum } from '../../../shared/enums/days-of-week.enum';
@@ -90,7 +90,7 @@ export class CreateStudentDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsNumber()
   campus?: string;
 
   @ApiProperty({ type: [CreateContactPersonDto] })

@@ -39,6 +39,9 @@ export class UserEntity {
   @Column({ name: 'reset_token', nullable: true })
   resetToken?: string;
 
+  @Column({ name: 'reset_token_at', nullable: true })
+  resetTokenAt?: Date;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

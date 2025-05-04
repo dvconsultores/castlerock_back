@@ -1,0 +1,36 @@
+<html lang='en'>
+  <head>
+    <meta charset='UTF-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+    <title>Verification Code - Venwallet</title>
+    <style>
+      body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; } .container { max-width:
+      600px; margin: 30px auto; background: #ffffff; border: 1px solid #dddddd; border-radius: 8px; box-shadow: 0 2px
+      4px rgba(0, 0, 0, 0.1); overflow: hidden; } .header { background-color: #6f2f87; color: #ffffff; padding: 20px;
+      text-align: center; } .header h1 { margin: 0; font-size: 24px; } .content { padding: 20px; text-align: center; }
+      .content p { font-size: 16px; color: #333333; margin: 10px 0; } .otp-box { display: inline-block; padding: 10px
+      20px; background-color: #f8f9fa; border: 1px solid #dddddd; border-radius: 5px; font-size: 28px; font-weight:
+      bold; color: #6f2f87; letter-spacing: 3px; } .footer { background-color: #f8f9fa; color: #888888; padding: 15px;
+      text-align: center; font-size: 12px; } .footer a { color: #007bff; text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <div class='container'>
+      <div class='header'>
+        <h1>Verify Your Venwallet Account</h1>
+      </div>
+      <div class='content'>
+        <p>We received a request to verify your account on Venwallet.</p>
+        <p>Use the following verification code to proceed:</p>
+        <div class='otp-box'>{{otp}}</div>
+        <p><strong>This code is valid for 1 hour.</strong></p>
+        <p>For security reasons, do not share this code with anyone.</p>
+        <p>If you did not request this code, you can safely ignore this message.</p>
+      </div>
+      <div class='footer'>
+        <p>Thank you for trusting <strong>Venwallet</strong>.</p>
+        <p>If you have questions, visit our <a href='https://venwallet.com/support'>Help Center</a>.</p>
+      </div>
+    </div>
+  </body>
+</html>

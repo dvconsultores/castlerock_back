@@ -35,4 +35,16 @@ export class EnvironmentVariables {
 
   @IsString()
   LOGGER_PRIVATE_KEY!: string;
+
+  @IsString()
+  MAIL_HOST!: string;
+
+  @IsString()
+  MAIL_USER!: string;
+
+  @IsString()
+  MAIL_PASSWORD!: string;
+
+  @IsString()
+  MAIL_FROM!: string;
 }

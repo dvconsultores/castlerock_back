@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable, InternalServerErrorException, No
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClassEntity } from '../entities/class.entity';
-import { CreateClassDto, UpdateClassDto } from '../dto/class.dto';
+import { ClassDto, CreateClassDto, UpdateClassDto } from '../dto/class.dto';
 import { plainToClass } from 'class-transformer';
 
 @Injectable()
@@ -16,7 +16,7 @@ export class ClassService {
     return await this.repository.save(entity);
   }
 
-  async create(dto: CreateClassDto): Promise<ClassEntity> {
+  async create(dto: ClassDto): Promise<ClassEntity> {
     const newEntity = plainToClass(ClassEntity, dto);
 
     return await this.repository.save(newEntity);

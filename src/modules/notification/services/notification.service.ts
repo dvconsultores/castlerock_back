@@ -21,8 +21,11 @@ export class NotificationService {
     return await this.repository.save(newEntity);
   }
 
-  async findAll(): Promise<NotificationEntity[]> {
-    return await this.repository.find();
+  async findByUserId(userId: number): Promise<NotificationEntity[]> {
+    return await this.repository.find({
+      where: { user: { id: userId } },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async findOne(id: number): Promise<NotificationEntity | null> {

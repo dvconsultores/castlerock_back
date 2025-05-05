@@ -24,13 +24,13 @@ export class CreateNotificationDto {
 }
 
 export class UpdateNotificationDto {
-  @ApiProperty()
-  @IsString()
-  @IsOptional()
-  message?: string;
+  // @ApiProperty()
+  // @IsString()
+  // @IsOptional()
+  // message?: string;
 
   @ApiProperty()
   @IsEnum(NotificationStatus)
-  @IsOptional()
-  status?: NotificationStatus;
+  @IsNotEmpty()
+  status: NotificationStatus;
 }

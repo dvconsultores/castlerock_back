@@ -31,7 +31,7 @@ export class StudentService {
     return students.map((student) => instanceToPlain(student));
   }
 
-  async findOne(id: string): Promise<any> {
+  async findOne(id: number): Promise<any> {
     const student = await this.repository.findOne({
       where: { id },
     });
@@ -39,7 +39,7 @@ export class StudentService {
     return student ? instanceToPlain(student) : null;
   }
 
-  async findOneWithRelations(id: string, relations: string[]): Promise<any> {
+  async findOneWithRelations(id: number, relations: string[]): Promise<any> {
     const student = await this.repository.findOne({
       where: { id },
       relations,
@@ -48,7 +48,7 @@ export class StudentService {
     return student ? instanceToPlain(student) : null;
   }
 
-  async update(id: string, updateData: UpdateStudentDto): Promise<void> {
+  async update(id: number, updateData: UpdateStudentDto): Promise<void> {
     try {
       const student = await this.repository.findOne({ where: { id } });
 
@@ -76,7 +76,7 @@ export class StudentService {
     }
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: number): Promise<void> {
     const deleteResult = await this.repository.delete({ id });
     if (deleteResult.affected === 0) {
       throw new NotFoundException('Student not found');

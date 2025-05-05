@@ -1,34 +1,55 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, Query, Put } from '@nestjs/common';
-import { ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  ParseUUIDPipe,
+  Query,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CreateNotificationDto, UpdateNotificationDto } from '../dto/notification.dto';
 import { NotificationService } from '../services/notification.service';
+import { AuthGuard } from '../../../helpers/guards/auth.guard';
+import { User } from '../../../helpers/decorators/user.decorator';
+import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
 
 @ApiTags('Notifications')
 @Controller('notifications')
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
-  @Post()
-  async create(@Body() body: CreateNotificationDto) {
-    return this.notificationService.create(body);
-  }
+  // @Post()
+  // async create(@Body() body: CreateNotificationDto) {
+  //   return this.notificationService.create(body);
+  // }
 
   @Get()
-  async findAll() {
-    return this.notificationService.findAll();
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  async findByUserId(@User() user: AuthUser) {
+    return this.notificationService.findByUserId(user.id);
   }
 
-  @Get(':id')
-  async findOne(@Param('id') id: number) {
-    return this.notificationService.findOne(id);
-  }
+  // @Get(':id')
+  // async findOne(@Param('id') id: number) {
+  //   return this.notificationService.findOne(id);
+  // }
 
-  @Put(':id')
+  @Patch(':id')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   async update(@Param('id') id: number, @Body() body: UpdateNotificationDto) {
     return this.notificationService.update(id, body);
   }
 
   @Delete(':id')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   async remove(@Param('id') id: number) {
     return this.notificationService.remove(id);
   }

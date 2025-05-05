@@ -26,14 +26,18 @@ export class StudentService {
     return instanceToPlain(saved);
   }
 
-  async findAll(): Promise<any[]> {
-    const students = await this.repository.find();
+  async findAll(campusId?: number): Promise<any[]> {
+    const students = await this.repository.find({
+      where: campusId ? { campus: { id: campusId } } : {},
+      relations: ['campus'],
+    });
     return students.map((student) => instanceToPlain(student));
   }
 
   async findOne(id: number): Promise<any> {
     const student = await this.repository.findOne({
       where: { id },
+      relations: ['campus'],
     });
 
     return student ? instanceToPlain(student) : null;

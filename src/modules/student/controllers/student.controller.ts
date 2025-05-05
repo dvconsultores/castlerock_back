@@ -34,8 +34,9 @@ export class StudentController {
   @Get()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findAll() {
-    return this.studentService.findAll();
+  @ApiQuery({ name: 'campus', required: false, type: Number, description: 'Campus ID' })
+  async findAll(@Query('campus') campusId?: number) {
+    return this.studentService.findAll(campusId);
   }
 
   @Get(':id')

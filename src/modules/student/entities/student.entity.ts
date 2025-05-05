@@ -33,6 +33,12 @@ export class StudentEntity {
   @Column()
   gender: 'M' | 'F' | 'Other';
 
+  @Column({ nullable: true })
+  image: string;
+
+  @Column({ nullable: true })
+  notes: string;
+
   @OneToMany(() => ContactPersonEntity, (contact) => contact.student, {
     cascade: true,
     eager: true,

@@ -36,6 +36,8 @@ export class MailService {
       mailOptions.context = context;
     }
 
+    console.log('Mail options:', mailOptions);
+
     try {
       const result = await this.mailerService.sendMail(mailOptions);
       console.log('Email enviado con éxito');

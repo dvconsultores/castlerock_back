@@ -2,14 +2,18 @@ import { HttpException, HttpStatus, Injectable, InternalServerErrorException, No
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TeacherEntity } from '../entities/teacher.entity';
-import { CreateTeacherDto, UpdateTeacherDto } from '../dto/teacher.dto';
+import { CreateTeacherDto, TeacherDto, UpdateTeacherDto } from '../dto/teacher.dto';
 import { plainToClass } from 'class-transformer';
+import { UserService } from '../../user/services/user.service';
+import { CreateUserDto } from '../../user/dto/user.dto';
+import { UserRole } from '../../../shared/enums/user-role.enum';
 
 @Injectable()
 export class TeacherService {
   constructor(
     @InjectRepository(TeacherEntity)
     private readonly repository: Repository<TeacherEntity>,
+    private readonly userService: UserService,
   ) {}
 
   async save(entity: TeacherEntity): Promise<TeacherEntity> {
@@ -17,7 +21,23 @@ export class TeacherService {
   }
 
   async create(dto: CreateTeacherDto): Promise<TeacherEntity> {
-    const newEntity = plainToClass(TeacherEntity, dto);
+    const userDto: CreateUserDto = {
+      ...dto.user,
+      role: UserRole.TEACHER,
+    };
+
+    const user = await this.userService.create(userDto);
+
+    if (!user) {
+      throw new InternalServerErrorException('Error creating user');
+    }
+
+    const teacherDto: TeacherDto = {
+      user: user.id,
+      campus: dto.campus,
+    };
+
+    const newEntity = plainToClass(TeacherEntity, teacherDto);
 
     return await this.repository.save(newEntity);
   }
@@ -47,10 +67,24 @@ export class TeacherService {
   }
 
   async update(id: number, updateData: UpdateTeacherDto): Promise<void> {
-    const updateResult = await this.repository.update({ id }, plainToClass(TeacherEntity, updateData));
-    if (updateResult.affected === 0) {
-      throw new NotFoundException('Item no encontrado');
+    const teacher = await this.repository.findOne({
+      where: { id },
+      relations: ['user'],
+    });
+
+    if (!teacher) {
+      throw new NotFoundException('Teacher not found');
     }
+
+    const { user: userData, ...teacherData } = updateData;
+
+    Object.assign(teacher, teacherData);
+
+    if (userData) {
+      Object.assign(teacher.user, userData);
+    }
+
+    await this.repository.save(teacher);
   }
 
   async remove(id: number): Promise<void> {

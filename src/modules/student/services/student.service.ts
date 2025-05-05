@@ -31,6 +31,8 @@ export class StudentService {
       where: campusId ? { campus: { id: campusId } } : {},
       relations: ['campus'],
     });
+
+    // console.log('students', students);
     return students.map((student) => instanceToPlain(student));
   }
 

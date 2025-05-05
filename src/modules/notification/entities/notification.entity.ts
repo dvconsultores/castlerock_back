@@ -1,10 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, CreateDateColumn } from 'typeorm';
 import { UserEntity } from '../../user/entities/user.entity';
-
-export enum NotificationStatus {
-  READ = 'read',
-  UNREAD = 'unread',
-}
+import { NotificationStatus } from '../../../shared/enums/notification-status.enum';
 
 @Entity({ name: 'notifications' })
 export class NotificationEntity {

@@ -67,4 +67,9 @@ export class UpdateClassDto {
   @IsOptional()
   @IsEnum(ProgramType)
   program?: ProgramType;
+
+  @ApiProperty()
+  @IsOptional()
+  @IsString()
+  image?: string;
 }

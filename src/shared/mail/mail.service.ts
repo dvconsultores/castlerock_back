@@ -24,6 +24,7 @@ export class MailService {
     template?: string;
     context?: Record<string, any>;
   }) {
+    console.log('Sending email...');
     const mailOptions: any = {
       to,
       subject,

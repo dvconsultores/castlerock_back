@@ -101,6 +101,8 @@ export class AuthService {
       },
     });
 
+    console.log('Email sent successfully');
+
     return { message: 'Reset token sent to email' };
   }
 

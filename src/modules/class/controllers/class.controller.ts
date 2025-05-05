@@ -38,8 +38,9 @@ export class ClassController {
   @Get()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findAll() {
-    return this.classService.findAll();
+  @ApiQuery({ name: 'campus', required: false, type: Number, description: 'Campus ID' })
+  async findAll(@Query('campus') campusId?: number) {
+    return this.classService.findAll(campusId);
   }
 
   @Get(':id')

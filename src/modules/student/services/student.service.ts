@@ -27,20 +27,26 @@ export class StudentService {
   }
 
   async findAll(campusId?: number): Promise<any[]> {
-    const students = await this.repository.find({
-      where: campusId ? { campus: { id: campusId } } : {},
-      relations: ['campus'],
-    });
+    const query = this.repository
+      .createQueryBuilder('student')
+      .leftJoinAndSelect('student.campus', 'campus')
+      .select(['student', 'campus.id', 'campus.name']);
 
-    // console.log('students', students);
+    if (campusId) {
+      query.where('campus.id = :campusId', { campusId });
+    }
+
+    const students = await query.getMany();
     return students.map((student) => instanceToPlain(student));
   }
 
   async findOne(id: number): Promise<any> {
-    const student = await this.repository.findOne({
-      where: { id },
-      relations: ['campus'],
-    });
+    const student = await this.repository
+      .createQueryBuilder('student')
+      .leftJoinAndSelect('student.campus', 'campus')
+      .select(['student', 'campus.id', 'campus.name'])
+      .where('student.id = :id', { id })
+      .getOne();
 
     return student ? instanceToPlain(student) : null;
   }

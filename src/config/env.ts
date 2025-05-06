@@ -39,6 +39,9 @@ export class EnvironmentVariables {
   @IsString()
   MAIL_HOST!: string;
 
+  @IsInt()
+  MAIL_PORT!: number;
+
   @IsString()
   MAIL_USER!: string;
 

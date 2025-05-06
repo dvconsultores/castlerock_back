@@ -39,6 +39,16 @@ export class CreateUserDto {
   @IsNotEmpty()
   role: UserRole;
 
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @ApiProperty()
+  @IsOptional()
+  @IsString()
+  image?: string;
+
   // @ApiProperty()
   // @IsOptional()
   // branchId?: number;
@@ -69,4 +79,14 @@ export class UpdateUserDto {
   @IsEnum(UserRole)
   @IsOptional()
   role?: UserRole;
+
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @ApiProperty()
+  @IsOptional()
+  @IsString()
+  image?: string;
 }

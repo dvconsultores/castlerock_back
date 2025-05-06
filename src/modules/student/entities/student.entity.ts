@@ -18,8 +18,8 @@ import { Expose } from 'class-transformer';
 
 @Entity('students')
 export class StudentEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column({ name: 'first_name' })
   firstName: string;
@@ -32,6 +32,12 @@ export class StudentEntity {
 
   @Column()
   gender: 'M' | 'F' | 'Other';
+
+  @Column({ nullable: true })
+  image: string;
+
+  @Column({ nullable: true })
+  notes: string;
 
   @OneToMany(() => ContactPersonEntity, (contact) => contact.student, {
     cascade: true,

@@ -30,6 +30,12 @@ export class UserEntity {
   @Column()
   password: string;
 
+  @Column({ nullable: true })
+  phone: string;
+
+  @Column({ nullable: true })
+  image: string;
+
   @Column({ type: 'enum', enum: UserRole })
   role: UserRole;
 

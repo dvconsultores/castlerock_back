@@ -26,20 +26,32 @@ export class StudentService {
     return instanceToPlain(saved);
   }
 
-  async findAll(): Promise<any[]> {
-    const students = await this.repository.find();
+  async findAll(campusId?: number): Promise<any[]> {
+    const query = this.repository
+      .createQueryBuilder('student')
+      .leftJoinAndSelect('student.campus', 'campus')
+      .select(['student', 'campus.id', 'campus.name']);
+
+    if (campusId) {
+      query.where('campus.id = :campusId', { campusId });
+    }
+
+    const students = await query.getMany();
     return students.map((student) => instanceToPlain(student));
   }
 
-  async findOne(id: string): Promise<any> {
-    const student = await this.repository.findOne({
-      where: { id },
-    });
+  async findOne(id: number): Promise<any> {
+    const student = await this.repository
+      .createQueryBuilder('student')
+      .leftJoinAndSelect('student.campus', 'campus')
+      .select(['student', 'campus.id', 'campus.name'])
+      .where('student.id = :id', { id })
+      .getOne();
 
     return student ? instanceToPlain(student) : null;
   }
 
-  async findOneWithRelations(id: string, relations: string[]): Promise<any> {
+  async findOneWithRelations(id: number, relations: string[]): Promise<any> {
     const student = await this.repository.findOne({
       where: { id },
       relations,
@@ -48,7 +60,7 @@ export class StudentService {
     return student ? instanceToPlain(student) : null;
   }
 
-  async update(id: string, updateData: UpdateStudentDto): Promise<void> {
+  async update(id: number, updateData: UpdateStudentDto): Promise<void> {
     try {
       const student = await this.repository.findOne({ where: { id } });
 
@@ -76,7 +88,7 @@ export class StudentService {
     }
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: number): Promise<void> {
     const deleteResult = await this.repository.delete({ id });
     if (deleteResult.affected === 0) {
       throw new NotFoundException('Student not found');

@@ -22,8 +22,11 @@ export class ClassService {
     return await this.repository.save(newEntity);
   }
 
-  async findAll(): Promise<ClassEntity[]> {
-    return await this.repository.find();
+  async findAll(campusId?: number): Promise<ClassEntity[]> {
+    return await this.repository.find({
+      where: campusId ? { campus: { id: campusId } } : {},
+      relations: ['campus'],
+    });
   }
 
   async findOne(id: number): Promise<ClassEntity | null> {

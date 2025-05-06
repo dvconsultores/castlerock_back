@@ -34,14 +34,15 @@ export class StudentController {
   @Get()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findAll() {
-    return this.studentService.findAll();
+  @ApiQuery({ name: 'campus', required: false, type: Number, description: 'Campus ID' })
+  async findAll(@Query('campus') campusId?: number) {
+    return this.studentService.findAll(campusId);
   }
 
   @Get(':id')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: number) {
     return this.studentService.findOne(id);
   }
 
@@ -49,7 +50,7 @@ export class StudentController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async update(@Param('id') id: string, @Body() body: UpdateStudentDto) {
+  async update(@Param('id') id: number, @Body() body: UpdateStudentDto) {
     return this.studentService.update(id, body);
   }
 
@@ -57,7 +58,7 @@ export class StudentController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id') id: number) {
     return this.studentService.remove(id);
   }
 }

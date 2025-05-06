@@ -33,13 +33,18 @@ export class CreateClassDto {
   @IsNotEmpty()
   @IsEnum(ProgramType)
   program: ProgramType;
-}
 
-export class ClassDto extends CreateClassDto {
   @ApiProperty()
   @IsOptional()
   @IsString()
   image?: string;
+}
+
+export class ClassDto extends CreateClassDto {
+  // @ApiProperty()
+  // @IsOptional()
+  // @IsString()
+  // image?: string;
 }
 
 export class UpdateClassDto {
@@ -62,4 +67,9 @@ export class UpdateClassDto {
   @IsOptional()
   @IsEnum(ProgramType)
   program?: ProgramType;
+
+  @ApiProperty()
+  @IsOptional()
+  @IsString()
+  image?: string;
 }

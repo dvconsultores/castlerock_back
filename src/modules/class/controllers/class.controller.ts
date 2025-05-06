@@ -31,35 +31,16 @@ export class ClassController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  @UseInterceptors(FileInterceptor('image'))
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    description: 'Sube una imagen de la clase',
-    schema: {
-      type: 'object',
-      properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
-        },
-      },
-    },
-  })
-  async create(@Body() body: CreateClassDto, @UploadedFile() image: Multer.File) {
-    console.log('image', image);
-    const classData: ClassDto = {
-      ...body,
-      image: image ? image.path : null,
-    };
-
-    return this.classService.create(classData);
+  async create(@Body() body: CreateClassDto) {
+    return this.classService.create(body);
   }
 
   @Get()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findAll() {
-    return this.classService.findAll();
+  @ApiQuery({ name: 'campus', required: false, type: Number, description: 'Campus ID' })
+  async findAll(@Query('campus') campusId?: number) {
+    return this.classService.findAll(campusId);
   }
 
   @Get(':id')

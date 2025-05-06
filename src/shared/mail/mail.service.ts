@@ -24,6 +24,7 @@ export class MailService {
     template?: string;
     context?: Record<string, any>;
   }) {
+    console.log('Sending email...');
     const mailOptions: any = {
       to,
       subject,
@@ -34,6 +35,8 @@ export class MailService {
       mailOptions.template = template;
       mailOptions.context = context;
     }
+
+    console.log('Mail options:', mailOptions);
 
     try {
       const result = await this.mailerService.sendMail(mailOptions);

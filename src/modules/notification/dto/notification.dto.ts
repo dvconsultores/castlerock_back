@@ -10,6 +10,7 @@ import {
   IsEmail,
   MinLength,
 } from 'class-validator';
+import { NotificationStatus } from '../../../shared/enums/notification-status.enum';
 
 export class CreateNotificationDto {
   @ApiProperty()
@@ -23,8 +24,13 @@ export class CreateNotificationDto {
 }
 
 export class UpdateNotificationDto {
+  // @ApiProperty()
+  // @IsString()
+  // @IsOptional()
+  // message?: string;
+
   @ApiProperty()
-  @IsString()
-  @IsOptional()
-  message?: string;
+  @IsEnum(NotificationStatus)
+  @IsNotEmpty()
+  status: NotificationStatus;
 }

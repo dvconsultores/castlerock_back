@@ -92,7 +92,7 @@ export class AuthService {
 
     console.log(`Send email to ${email} with reset token: ${token}`);
 
-    this.mailService.sendEmail({
+    await this.mailService.sendEmail({
       to: email,
       subject: 'Password Reset',
       template: './reset-password-en',
@@ -100,6 +100,8 @@ export class AuthService {
         otp: token,
       },
     });
+
+    console.log('Email sent successfully');
 
     return { message: 'Reset token sent to email' };
   }

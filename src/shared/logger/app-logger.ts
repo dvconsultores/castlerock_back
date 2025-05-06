@@ -11,7 +11,7 @@ export class AppLogger implements LoggerService {
 
   constructor() {
     const isProduction = process.env.NODE_ENV === 'production';
-    const isStaging = process.env.NODE_ENV === 'staging';
+    const isTesting = process.env.NODE_ENV === 'testing';
 
     const transports: winston.transport[] = [
       new winston.transports.Console({
@@ -25,7 +25,7 @@ export class AppLogger implements LoggerService {
       }),
     ];
 
-    if (isProduction || isStaging) {
+    if (isProduction || isTesting) {
       transports.push(
         new LoggingWinston({
           logName: this.configService.get('NODE_ENV'),

@@ -15,13 +15,6 @@ import {
 import { CreateUserDto, UpdateUserDto } from '../../user/dto/user.dto';
 import { Type } from 'class-transformer';
 
-// export class CreateTeacherDto extends OmitType(CreateUserDto, ['role'] as const) {
-//   @ApiProperty()
-//   @IsNumber()
-//   @IsNotEmpty()
-//   campus: number;
-// }
-
 export class OmitCreateUserDto extends OmitType(CreateUserDto, ['role'] as const) {}
 export class OmitUpdateUserDto extends OmitType(UpdateUserDto, ['role'] as const) {}
 

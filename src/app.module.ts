@@ -46,8 +46,8 @@ import { AdditionalProgramModule } from './modules/additional-program/additional
     StudentModule,
     ClassModule,
     PlanningModule,
-    MailModule,
     AdditionalProgramModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [

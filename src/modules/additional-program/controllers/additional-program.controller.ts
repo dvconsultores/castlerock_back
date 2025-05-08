@@ -17,8 +17,8 @@ import { ApiBearerAuth, ApiBody, ApiConsumes, ApiQuery, ApiTags } from '@nestjs/
 import { CreateAdditionalProgramDto, UpdateAdditionalProgramDto } from '../dto/additional-program.dto';
 import { AdditionalProgramService } from '../services/additional-program.service';
 import { AuthGuard } from '../../../helpers/guards/auth.guard';
-import { UserRole } from '../../../shared/enums/user-role.enum';
 import { Roles } from '../../../helpers/decorators/roles.decorator';
+import { UserRole } from '../../../shared/enums/user-role.enum';
 
 @ApiTags('Additional Programs')
 @Controller('additional-programs')

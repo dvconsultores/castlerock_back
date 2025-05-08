@@ -4,22 +4,36 @@ import { Repository } from 'typeorm';
 import { AdditionalProgramEntity } from '../entities/additional-program.entity';
 import { CreateAdditionalProgramDto, UpdateAdditionalProgramDto } from '../dto/additional-program.dto';
 import { plainToClass } from 'class-transformer';
+import { Multer } from 'multer';
+import { ExceptionHandler } from '../../../helpers/handlers/exception.handler';
+import { StorageService } from '../../../shared/storage/storage.service';
 
 @Injectable()
 export class AdditionalProgramService {
   constructor(
     @InjectRepository(AdditionalProgramEntity)
     private readonly repository: Repository<AdditionalProgramEntity>,
+    private readonly storageService: StorageService,
   ) {}
 
   async save(entity: AdditionalProgramEntity): Promise<AdditionalProgramEntity> {
     return await this.repository.save(entity);
   }
 
-  async create(dto: CreateAdditionalProgramDto): Promise<AdditionalProgramEntity> {
-    const newEntity = plainToClass(AdditionalProgramEntity, dto);
+  async create(dto: CreateAdditionalProgramDto, image?: Multer.File): Promise<AdditionalProgramEntity> {
+    try {
+      let imageUrl: string | null = null;
 
-    return await this.repository.save(newEntity);
+      if (image) {
+        imageUrl = await this.storageService.upload(image);
+      }
+
+      const newEntity = plainToClass(AdditionalProgramEntity, { ...dto, image: imageUrl });
+
+      return await this.repository.save(newEntity);
+    } catch (error) {
+      throw new ExceptionHandler(error);
+    }
   }
 
   async findAll(campusId?: number): Promise<AdditionalProgramEntity[]> {

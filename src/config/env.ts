@@ -50,4 +50,19 @@ export class EnvironmentVariables {
 
   @IsString()
   MAIL_FROM!: string;
+
+  @IsString()
+  DO_SPACES_KEY!: string;
+
+  @IsString()
+  DO_SPACES_SECRET!: string;
+
+  @IsString()
+  DO_SPACES_REGION!: string;
+
+  @IsString()
+  DO_SPACES_BUCKET!: string;
+
+  @IsString()
+  DO_SPACES_ENDPOINT!: string;
 }

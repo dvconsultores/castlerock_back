@@ -21,6 +21,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { MailModule } from './shared/mail/mail.module';
 import { AdditionalProgramModule } from './modules/additional-program/additional-program.module';
+import { StorageModule } from './shared/storage/storage.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { AdditionalProgramModule } from './modules/additional-program/additional
     PlanningModule,
     AdditionalProgramModule,
     MailModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [

@@ -19,6 +19,8 @@ import { AdditionalProgramService } from '../services/additional-program.service
 import { AuthGuard } from '../../../helpers/guards/auth.guard';
 import { Roles } from '../../../helpers/decorators/roles.decorator';
 import { UserRole } from '../../../shared/enums/user-role.enum';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Multer } from 'multer';
 
 @ApiTags('Additional Programs')
 @Controller('additional-programs')
@@ -29,8 +31,14 @@ export class AdditionalProgramController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async create(@Body() body: CreateAdditionalProgramDto) {
-    return this.additionalProgramService.create(body);
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Create an additional program with image upload',
+    type: CreateAdditionalProgramDto,
+  })
+  async create(@UploadedFile() image: Multer.File, @Body() body: CreateAdditionalProgramDto) {
+    return this.additionalProgramService.create(body, image);
   }
 
   @Get()

@@ -14,6 +14,8 @@ import {
 } from 'class-validator';
 import { ProgramType } from '../../../shared/enums/program-type.enum';
 import { DayOfWeekEnum } from '../../../shared/enums/days-of-week.enum';
+import { StringToNumber } from '../../../helpers/decorators/string-to-number.decorator';
+import { ToArray } from '../../../helpers/decorators/to-array.decorator';
 
 export class CreateAdditionalProgramDto {
   @ApiProperty()
@@ -23,18 +25,22 @@ export class CreateAdditionalProgramDto {
 
   @ApiProperty()
   @IsNotEmpty()
+  @StringToNumber()
   @IsNumber()
   campus: number;
 
   @ApiProperty({ type: [String], enum: DayOfWeekEnum, isArray: true })
+  @ToArray()
   @IsArray()
   @IsEnum(DayOfWeekEnum, { each: true })
-  daysEnrolled: DayOfWeekEnum[];
+  days: DayOfWeekEnum[];
 
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsString()
-  image: string;
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+  })
+  image: any;
 }
 
 export class UpdateAdditionalProgramDto extends PartialType(CreateAdditionalProgramDto) {}

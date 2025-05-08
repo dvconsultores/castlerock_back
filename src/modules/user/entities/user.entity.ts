@@ -12,6 +12,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import { UserRole } from '../../../shared/enums/user-role.enum';
 import { NotificationEntity } from '../../notification/entities/notification.entity';
+import { Exclude } from 'class-transformer';
 
 @Entity({ name: 'users' })
 export class UserEntity {
@@ -51,6 +52,7 @@ export class UserEntity {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
+  @Exclude()
   private tempPassword!: string;
 
   @AfterLoad()

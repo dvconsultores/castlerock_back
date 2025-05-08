@@ -18,11 +18,23 @@ import { Type } from 'class-transformer';
 export class OmitCreateUserDto extends OmitType(CreateUserDto, ['role'] as const) {}
 export class OmitUpdateUserDto extends OmitType(UpdateUserDto, ['role'] as const) {}
 
+// export class CreateTeacherDto {
+//   @ApiProperty({ type: OmitType(CreateUserDto, ['role'] as const) })
+//   @ValidateNested()
+//   @Type(() => OmitCreateUserDto)
+//   user: OmitCreateUserDto;
+
+//   @ApiProperty()
+//   @IsNumber()
+//   @IsNotEmpty()
+//   campus: number;
+// }
+
 export class CreateTeacherDto {
-  @ApiProperty({ type: OmitType(CreateUserDto, ['role'] as const) })
-  @ValidateNested()
-  @Type(() => OmitCreateUserDto)
-  user: OmitCreateUserDto;
+  @ApiProperty()
+  @IsNumber()
+  @IsNotEmpty()
+  user: number;
 
   @ApiProperty()
   @IsNumber()
@@ -42,12 +54,24 @@ export class TeacherDto {
   campus: number;
 }
 
+// export class UpdateTeacherDto {
+//   @ApiProperty({ type: OmitUpdateUserDto })
+//   @IsOptional()
+//   @ValidateNested()
+//   @Type(() => OmitUpdateUserDto)
+//   user?: OmitUpdateUserDto;
+
+//   @ApiProperty()
+//   @IsOptional()
+//   @IsNumber()
+//   campus?: number;
+// }
+
 export class UpdateTeacherDto {
-  @ApiProperty({ type: OmitUpdateUserDto })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => OmitUpdateUserDto)
-  user?: OmitUpdateUserDto;
+  @ApiProperty()
+  @IsNumber()
+  @IsNotEmpty()
+  user: number;
 
   @ApiProperty()
   @IsOptional()

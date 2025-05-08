@@ -21,31 +21,62 @@ export class TeacherService {
   }
 
   async create(dto: CreateTeacherDto): Promise<TeacherEntity> {
-    const userDto: CreateUserDto = {
-      ...dto.user,
-      role: UserRole.TEACHER,
-    };
+    // const userDto: CreateUserDto = {
+    //   ...dto.user,
+    //   role: UserRole.TEACHER,
+    // };
 
-    const user = await this.userService.create(userDto);
+    // const user = await this.userService.create(userDto);
 
-    if (!user) {
-      throw new InternalServerErrorException('Error creating user');
-    }
+    // if (!user) {
+    //   throw new InternalServerErrorException('Error creating user');
+    // }
 
-    const teacherDto: TeacherDto = {
-      user: user.id,
-      campus: dto.campus,
-    };
+    // const teacherDto: TeacherDto = {
+    //   user: user.id,
+    //   campus: dto.campus,
+    // };
 
-    const newEntity = plainToClass(TeacherEntity, teacherDto);
+    const newEntity = plainToClass(TeacherEntity, dto);
 
     return await this.repository.save(newEntity);
   }
 
-  async findAll(): Promise<TeacherEntity[]> {
-    return await this.repository.find({
-      relations: ['user'],
-    });
+  async findAll(campusId?: number): Promise<any[]> {
+    const query = this.repository
+      .createQueryBuilder('teacher')
+      .leftJoinAndSelect('teacher.user', 'user')
+      .leftJoinAndSelect('teacher.campus', 'campus')
+      .select([
+        'teacher',
+        'user.id',
+        'user.firstName',
+        'user.lastName',
+        'user.email',
+        'user.phone',
+        'user.image',
+        'user.role',
+        'campus.id',
+        'campus.name',
+      ]);
+
+    if (campusId) {
+      query.where('campus.id = :campusId', { campusId });
+    }
+
+    const teachers = await query.getMany();
+
+    for (const teacher of teachers) {
+      if (teacher.user) {
+        delete (teacher.user as any).password;
+
+        if ((teacher.user as any).tempPassword) {
+          delete (teacher.user as any).tempPassword;
+        }
+      }
+    }
+
+    return teachers;
   }
 
   async findOne(id: number): Promise<TeacherEntity | null> {

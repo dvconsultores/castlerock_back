@@ -21,31 +21,62 @@ export class TeacherService {
   }
 
   async create(dto: CreateTeacherDto): Promise<TeacherEntity> {
-    const userDto: CreateUserDto = {
-      ...dto.user,
-      role: UserRole.TEACHER,
-    };
+    // const userDto: CreateUserDto = {
+    //   ...dto.user,
+    //   role: UserRole.TEACHER,
+    // };
 
-    const user = await this.userService.create(userDto);
+    // const user = await this.userService.create(userDto);
 
-    if (!user) {
-      throw new InternalServerErrorException('Error creating user');
-    }
+    // if (!user) {
+    //   throw new InternalServerErrorException('Error creating user');
+    // }
 
-    const teacherDto: TeacherDto = {
-      user: user.id,
-      campus: dto.campus,
-    };
+    // const teacherDto: TeacherDto = {
+    //   user: user.id,
+    //   campus: dto.campus,
+    // };
 
-    const newEntity = plainToClass(TeacherEntity, teacherDto);
+    const newEntity = plainToClass(TeacherEntity, dto);
 
     return await this.repository.save(newEntity);
   }
 
-  async findAll(): Promise<TeacherEntity[]> {
-    return await this.repository.find({
-      relations: ['user'],
-    });
+  async findAll(campusId?: number): Promise<any[]> {
+    const query = this.repository
+      .createQueryBuilder('teacher')
+      .leftJoinAndSelect('teacher.user', 'user')
+      .leftJoinAndSelect('teacher.campus', 'campus')
+      .select([
+        'teacher',
+        'user.id',
+        'user.firstName',
+        'user.lastName',
+        'user.email',
+        'user.phone',
+        'user.image',
+        'user.role',
+        'campus.id',
+        'campus.name',
+      ]);
+
+    if (campusId) {
+      query.where('campus.id = :campusId', { campusId });
+    }
+
+    const teachers = await query.getMany();
+
+    for (const teacher of teachers) {
+      if (teacher.user) {
+        delete (teacher.user as any).password;
+
+        if ((teacher.user as any).tempPassword) {
+          delete (teacher.user as any).tempPassword;
+        }
+      }
+    }
+
+    return teachers;
   }
 
   async findOne(id: number): Promise<TeacherEntity | null> {
@@ -70,30 +101,34 @@ export class TeacherService {
   }
 
   async update(id: number, updateData: UpdateTeacherDto): Promise<void> {
-    const teacher = await this.repository.findOne({
-      where: { id },
-      relations: ['user'],
-    });
-
-    if (!teacher) {
-      throw new NotFoundException('Teacher not found');
+    const updateResult = await this.repository.update({ id }, plainToClass(TeacherEntity, updateData));
+    if (updateResult.affected === 0) {
+      throw new NotFoundException('Item not found');
     }
+    // const teacher = await this.repository.findOne({
+    //   where: { id },
+    //   relations: ['user'],
+    // });
 
-    const { user: userData, ...teacherData } = updateData;
+    // if (!teacher) {
+    //   throw new NotFoundException('Teacher not found');
+    // }
 
-    Object.assign(teacher, teacherData);
+    // const { user: userData, ...teacherData } = updateData;
 
-    if (userData) {
-      Object.assign(teacher.user, userData);
-    }
+    // Object.assign(teacher, teacherData);
 
-    await this.repository.save(teacher);
+    // if (userData) {
+    //   Object.assign(teacher.user, userData);
+    // }
+
+    // await this.repository.save(teacher);
   }
 
   async remove(id: number): Promise<void> {
     const deleteResult = await this.repository.delete({ id });
     if (deleteResult.affected === 0) {
-      throw new NotFoundException('Item no encontrado');
+      throw new NotFoundException('Item not found');
     }
   }
 }

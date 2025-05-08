@@ -30,6 +30,11 @@ export class CreateAdditionalProgramDto {
   @IsArray()
   @IsEnum(DayOfWeekEnum, { each: true })
   daysEnrolled: DayOfWeekEnum[];
+
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsString()
+  image: string;
 }
 
 export class UpdateAdditionalProgramDto extends PartialType(CreateAdditionalProgramDto) {}

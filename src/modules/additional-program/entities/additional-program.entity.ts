@@ -28,6 +28,9 @@ export class AdditionalProgramEntity {
   @IsEnum(DayOfWeekEnum, { each: true })
   days: DayOfWeekEnum[];
 
+  @Column()
+  image: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

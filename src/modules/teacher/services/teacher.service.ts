@@ -101,30 +101,34 @@ export class TeacherService {
   }
 
   async update(id: number, updateData: UpdateTeacherDto): Promise<void> {
-    const teacher = await this.repository.findOne({
-      where: { id },
-      relations: ['user'],
-    });
-
-    if (!teacher) {
-      throw new NotFoundException('Teacher not found');
+    const updateResult = await this.repository.update({ id }, plainToClass(TeacherEntity, updateData));
+    if (updateResult.affected === 0) {
+      throw new NotFoundException('Item not found');
     }
+    // const teacher = await this.repository.findOne({
+    //   where: { id },
+    //   relations: ['user'],
+    // });
 
-    const { user: userData, ...teacherData } = updateData;
+    // if (!teacher) {
+    //   throw new NotFoundException('Teacher not found');
+    // }
 
-    Object.assign(teacher, teacherData);
+    // const { user: userData, ...teacherData } = updateData;
 
-    if (userData) {
-      Object.assign(teacher.user, userData);
-    }
+    // Object.assign(teacher, teacherData);
 
-    await this.repository.save(teacher);
+    // if (userData) {
+    //   Object.assign(teacher.user, userData);
+    // }
+
+    // await this.repository.save(teacher);
   }
 
   async remove(id: number): Promise<void> {
     const deleteResult = await this.repository.delete({ id });
     if (deleteResult.affected === 0) {
-      throw new NotFoundException('Item no encontrado');
+      throw new NotFoundException('Item not found');
     }
   }
 }

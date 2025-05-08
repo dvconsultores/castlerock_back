@@ -64,10 +64,23 @@ export class AdditionalProgramService {
     });
   }
 
-  async update(id: number, updateData: UpdateAdditionalProgramDto): Promise<void> {
-    const updateResult = await this.repository.update({ id }, plainToClass(AdditionalProgramEntity, updateData));
-    if (updateResult.affected === 0) {
-      throw new NotFoundException('Item not found');
+  async update(id: number, updateData: UpdateAdditionalProgramDto, image?: Multer.File): Promise<void> {
+    try {
+      let imageUrl: string | undefined;
+
+      if (image) {
+        imageUrl = await this.storageService.upload(image);
+      }
+
+      const updateResult = await this.repository.update(
+        { id },
+        plainToClass(AdditionalProgramEntity, { ...updateData, image: imageUrl }),
+      );
+      if (updateResult.affected === 0) {
+        throw new NotFoundException('Item not found');
+      }
+    } catch (error) {
+      throw new ExceptionHandler(error);
     }
   }
 

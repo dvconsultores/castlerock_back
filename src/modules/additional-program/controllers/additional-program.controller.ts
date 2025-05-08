@@ -60,8 +60,14 @@ export class AdditionalProgramController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async update(@Param('id') id: number, @Body() body: UpdateAdditionalProgramDto) {
-    return this.additionalProgramService.update(id, body);
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Update an additional program with image upload',
+    type: UpdateAdditionalProgramDto,
+  })
+  async update(@Param('id') id: number, @Body() body: UpdateAdditionalProgramDto, @UploadedFile() image: Multer.File) {
+    return this.additionalProgramService.update(id, body, image);
   }
 
   @Delete(':id')

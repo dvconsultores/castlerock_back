@@ -25,18 +25,18 @@ export class AppLogger implements LoggerService {
       }),
     ];
 
-    if (isProduction || isTesting) {
-      transports.push(
-        new LoggingWinston({
-          logName: this.configService.get('NODE_ENV'),
-          projectId: this.configService.get('LOGGER_PROJECT_ID'),
-          credentials: {
-            client_email: this.configService.get('LOGGER_CLIENT_EMAIL'),
-            private_key: this.configService.get('LOGGER_PRIVATE_KEY'),
-          },
-        }),
-      );
-    }
+    // if (isProduction || isTesting) {
+    //   transports.push(
+    //     new LoggingWinston({
+    //       logName: this.configService.get('NODE_ENV'),
+    //       projectId: this.configService.get('LOGGER_PROJECT_ID'),
+    //       credentials: {
+    //         client_email: this.configService.get('LOGGER_CLIENT_EMAIL'),
+    //         private_key: this.configService.get('LOGGER_PRIVATE_KEY'),
+    //       },
+    //     }),
+    //   );
+    // }
 
     this.logger = winston.createLogger({
       level: 'info',

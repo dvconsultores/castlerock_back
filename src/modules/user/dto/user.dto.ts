@@ -44,6 +44,11 @@ export class CreateUserDto {
   @IsOptional()
   phone?: string;
 
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+  })
   image: string;
 
   // @ApiProperty()
@@ -82,5 +87,10 @@ export class UpdateUserDto {
   @IsOptional()
   phone?: string;
 
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+  })
   image?: string;
 }

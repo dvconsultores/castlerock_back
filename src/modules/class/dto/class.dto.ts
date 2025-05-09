@@ -34,6 +34,11 @@ export class CreateClassDto {
   @IsEnum(ProgramType)
   program: ProgramType;
 
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+  })
   image: string;
 }
 
@@ -65,5 +70,10 @@ export class UpdateClassDto {
   @IsEnum(ProgramType)
   program?: ProgramType;
 
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+  })
   image?: string;
 }

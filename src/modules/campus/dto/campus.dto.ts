@@ -32,6 +32,11 @@ export class CreateCampusDto {
   @IsString()
   phone: string;
 
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+  })
   image: string;
 }
 
@@ -56,5 +61,10 @@ export class UpdateCampusDto {
   @IsString()
   phone?: string;
 
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+  })
   image?: string;
 }

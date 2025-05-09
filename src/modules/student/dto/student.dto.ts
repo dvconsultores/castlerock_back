@@ -46,6 +46,11 @@ export class CreateStudentDto {
   @IsEnum(['M', 'F', 'Other'])
   gender: 'M' | 'F' | 'Other';
 
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+  })
   image: string;
 
   @ApiProperty()

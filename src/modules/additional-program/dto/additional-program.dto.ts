@@ -38,7 +38,6 @@ export class CreateAdditionalProgramDto {
   @ApiProperty({
     type: 'string',
     format: 'binary',
-    required: false,
   })
   image: any;
 }

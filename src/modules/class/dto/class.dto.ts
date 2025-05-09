@@ -37,7 +37,7 @@ export class CreateClassDto {
   @ApiProperty({
     type: 'string',
     format: 'binary',
-    required: false,
+    required: true,
   })
   image: string;
 }

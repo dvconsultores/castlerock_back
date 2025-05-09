@@ -35,7 +35,7 @@ export class CreateCampusDto {
   @ApiProperty({
     type: 'string',
     format: 'binary',
-    required: false,
+    required: true,
   })
   image: string;
 }

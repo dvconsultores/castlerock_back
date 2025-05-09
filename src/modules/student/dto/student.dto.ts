@@ -46,10 +46,7 @@ export class CreateStudentDto {
   @IsEnum(['M', 'F', 'Other'])
   gender: 'M' | 'F' | 'Other';
 
-  @ApiProperty()
-  @IsOptional()
-  @IsString()
-  image?: string;
+  image: string;
 
   @ApiProperty()
   @IsOptional()

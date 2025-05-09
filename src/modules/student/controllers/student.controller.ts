@@ -10,13 +10,17 @@ import {
   Query,
   Put,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CreateStudentDto, UpdateStudentDto } from '../dto/student.dto';
 import { StudentService } from '../services/student.service';
 import { AuthGuard } from '../../../helpers/guards/auth.guard';
 import { UserRole } from '../../../shared/enums/user-role.enum';
 import { Roles } from '../../../helpers/decorators/roles.decorator';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Multer } from 'multer';
 
 @ApiTags('Students')
 @Controller('students')
@@ -27,8 +31,14 @@ export class StudentController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async create(@Body() body: CreateStudentDto) {
-    return this.studentService.create(body);
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Create an student with image upload',
+    type: CreateStudentDto,
+  })
+  async create(@Body() body: CreateStudentDto, @UploadedFile() image: Multer.File) {
+    return this.studentService.create(body, image);
   }
 
   @Get()
@@ -50,6 +60,12 @@ export class StudentController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Update an student with image upload',
+    type: UpdateStudentDto,
+  })
   async update(@Param('id') id: number, @Body() body: UpdateStudentDto) {
     return this.studentService.update(id, body);
   }

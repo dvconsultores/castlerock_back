@@ -6,6 +6,8 @@ import { CreateStudentDto, UpdateStudentDto } from '../dto/student.dto';
 import { instanceToPlain, plainToClass } from 'class-transformer';
 import { ExceptionHandler } from '../../../helpers/handlers/exception.handler';
 import { ContactPersonEntity } from '../entities/contact-person.entity';
+import { StorageService } from '../../../shared/storage/storage.service';
+import { Multer } from 'multer';
 
 @Injectable()
 export class StudentService {
@@ -14,13 +16,21 @@ export class StudentService {
     private readonly repository: Repository<StudentEntity>,
     @InjectRepository(ContactPersonEntity)
     private readonly contactPersonRepository: Repository<ContactPersonEntity>,
+    private readonly storageService: StorageService,
   ) {}
 
   async save(entity: StudentEntity): Promise<StudentEntity> {
     return await this.repository.save(entity);
   }
 
-  async create(dto: CreateStudentDto): Promise<any> {
+  async create(dto: CreateStudentDto, image?: Multer.File): Promise<any> {
+    let imageUrl: string | null = null;
+
+    if (image) {
+      imageUrl = await this.storageService.upload(image);
+      dto.image = imageUrl;
+    }
+
     const newEntity = plainToClass(StudentEntity, dto);
     const saved = await this.repository.save(newEntity);
     return instanceToPlain(saved);
@@ -60,12 +70,19 @@ export class StudentService {
     return student ? instanceToPlain(student) : null;
   }
 
-  async update(id: number, updateData: UpdateStudentDto): Promise<void> {
+  async update(id: number, updateData: UpdateStudentDto, image?: Multer.File): Promise<void> {
     try {
       const student = await this.repository.findOne({ where: { id } });
 
       if (!student) {
         throw new NotFoundException('Student not found');
+      }
+
+      let imageUrl: string | undefined;
+
+      if (image) {
+        imageUrl = await this.storageService.upload(image);
+        updateData.image = imageUrl;
       }
 
       const { contacts, ...rest } = updateData;

@@ -68,10 +68,10 @@ export class TeacherDto {
 // }
 
 export class UpdateTeacherDto {
-  @ApiProperty()
-  @IsNumber()
-  @IsNotEmpty()
-  user: number;
+  // @ApiProperty()
+  // @IsNumber()
+  // @IsNotEmpty()
+  // user: number;
 
   @ApiProperty()
   @IsOptional()

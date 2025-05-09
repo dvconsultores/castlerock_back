@@ -26,9 +26,10 @@ export class AdditionalProgramService {
 
       if (image) {
         imageUrl = await this.storageService.upload(image);
+        dto.image = imageUrl;
       }
 
-      const newEntity = plainToClass(AdditionalProgramEntity, { ...dto, image: imageUrl });
+      const newEntity = plainToClass(AdditionalProgramEntity, dto);
 
       return await this.repository.save(newEntity);
     } catch (error) {
@@ -70,12 +71,10 @@ export class AdditionalProgramService {
 
       if (image) {
         imageUrl = await this.storageService.upload(image);
+        updateData.image = imageUrl;
       }
 
-      const updateResult = await this.repository.update(
-        { id },
-        plainToClass(AdditionalProgramEntity, { ...updateData, image: imageUrl }),
-      );
+      const updateResult = await this.repository.update({ id }, plainToClass(AdditionalProgramEntity, updateData));
       if (updateResult.affected === 0) {
         throw new NotFoundException('Item not found');
       }

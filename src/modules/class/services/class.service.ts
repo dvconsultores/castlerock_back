@@ -4,19 +4,29 @@ import { Repository } from 'typeorm';
 import { ClassEntity } from '../entities/class.entity';
 import { ClassDto, CreateClassDto, UpdateClassDto } from '../dto/class.dto';
 import { plainToClass } from 'class-transformer';
+import { StorageService } from '../../../shared/storage/storage.service';
+import { Multer } from 'multer';
 
 @Injectable()
 export class ClassService {
   constructor(
     @InjectRepository(ClassEntity)
     private readonly repository: Repository<ClassEntity>,
+    private readonly storageService: StorageService,
   ) {}
 
   async save(entity: ClassEntity): Promise<ClassEntity> {
     return await this.repository.save(entity);
   }
 
-  async create(dto: ClassDto): Promise<ClassEntity> {
+  async create(dto: ClassDto, image?: Multer.File): Promise<ClassEntity> {
+    let imageUrl: string | null = null;
+
+    if (image) {
+      imageUrl = await this.storageService.upload(image);
+      dto.image = imageUrl;
+    }
+
     const newEntity = plainToClass(ClassEntity, dto);
 
     return await this.repository.save(newEntity);
@@ -42,7 +52,14 @@ export class ClassService {
     });
   }
 
-  async update(id: number, updateData: UpdateClassDto): Promise<void> {
+  async update(id: number, updateData: UpdateClassDto, image?: Multer.File): Promise<void> {
+    let imageUrl: string | undefined;
+
+    if (image) {
+      imageUrl = await this.storageService.upload(image);
+      updateData.image = imageUrl;
+    }
+
     const updateResult = await this.repository.update({ id }, plainToClass(ClassEntity, updateData));
     if (updateResult.affected === 0) {
       throw new NotFoundException('Item no encontrado');

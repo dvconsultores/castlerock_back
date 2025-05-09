@@ -31,8 +31,14 @@ export class ClassController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async create(@Body() body: CreateClassDto) {
-    return this.classService.create(body);
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Create an classroom with image upload',
+    type: CreateClassDto,
+  })
+  async create(@Body() body: CreateClassDto, @UploadedFile() image: Multer.File) {
+    return this.classService.create(body, image);
   }
 
   @Get()
@@ -54,8 +60,14 @@ export class ClassController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async update(@Param('id') id: number, @Body() body: UpdateClassDto) {
-    return this.classService.update(id, body);
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Update an classroom with image upload',
+    type: UpdateClassDto,
+  })
+  async update(@Param('id') id: number, @Body() body: UpdateClassDto, @UploadedFile() image: Multer.File) {
+    return this.classService.update(id, body, image);
   }
 
   @Delete(':id')

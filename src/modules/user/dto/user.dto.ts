@@ -44,10 +44,7 @@ export class CreateUserDto {
   @IsOptional()
   phone?: string;
 
-  @ApiProperty()
-  @IsOptional()
-  @IsString()
-  image?: string;
+  image: string;
 
   // @ApiProperty()
   // @IsOptional()
@@ -85,8 +82,5 @@ export class UpdateUserDto {
   @IsOptional()
   phone?: string;
 
-  @ApiProperty()
-  @IsOptional()
-  @IsString()
   image?: string;
 }

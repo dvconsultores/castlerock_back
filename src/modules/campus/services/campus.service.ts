@@ -15,6 +15,9 @@ import { TeacherService } from '../../teacher/services/teacher.service';
 import { AssignTeacherDto } from '../../teacher/dto/teacher.dto';
 import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
 import { UserRole } from '../../../shared/enums/user-role.enum';
+import { StorageService } from '../../../shared/storage/storage.service';
+import { Multer } from 'multer';
+import { ExceptionHandler } from '../../../helpers/handlers/exception.handler';
 
 @Injectable()
 export class CampusService {
@@ -22,13 +25,21 @@ export class CampusService {
     @InjectRepository(CampusEntity)
     private readonly campusRepository: Repository<CampusEntity>,
     private readonly teacherService: TeacherService,
+    private readonly storageService: StorageService,
   ) {}
 
   async save(entity: CampusEntity): Promise<CampusEntity> {
     return await this.campusRepository.save(entity);
   }
 
-  async create(dto: CreateCampusDto): Promise<CampusEntity> {
+  async create(dto: CreateCampusDto, image?: Multer.File): Promise<CampusEntity> {
+    let imageUrl: string | null = null;
+
+    if (image) {
+      imageUrl = await this.storageService.upload(image);
+      dto.image = imageUrl;
+    }
+
     const newEntity = plainToClass(CampusEntity, dto);
 
     return await this.campusRepository.save(newEntity);
@@ -72,10 +83,21 @@ export class CampusService {
       .getOne();
   }
 
-  async update(id: number, updateData: UpdateCampusDto): Promise<void> {
-    const updateResult = await this.campusRepository.update({ id }, plainToClass(CampusEntity, updateData));
-    if (updateResult.affected === 0) {
-      throw new NotFoundException('Item no encontrado');
+  async update(id: number, updateData: UpdateCampusDto, image?: Multer.File): Promise<void> {
+    try {
+      let imageUrl: string | undefined;
+
+      if (image) {
+        imageUrl = await this.storageService.upload(image);
+        updateData.image = imageUrl;
+      }
+
+      const updateResult = await this.campusRepository.update({ id }, plainToClass(CampusEntity, updateData));
+      if (updateResult.affected === 0) {
+        throw new NotFoundException('Item not found');
+      }
+    } catch (error) {
+      throw new ExceptionHandler(error);
     }
   }
 

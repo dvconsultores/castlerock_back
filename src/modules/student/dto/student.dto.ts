@@ -32,9 +32,9 @@ export class CreateContactPersonDto {
   @IsEnum(['PRIMARY', 'SECONDARY', 'EMERGENCY_1', 'EMERGENCY_2'])
   role: 'PRIMARY' | 'SECONDARY' | 'EMERGENCY_1' | 'EMERGENCY_2';
 
-  // @ApiProperty()
-  // @IsUUID()
-  // student: string;
+  @ApiProperty()
+  @IsString()
+  image: string;
 }
 
 export class UpdateContactPersonDto extends PartialType(CreateContactPersonDto) {}
@@ -56,13 +56,6 @@ export class CreateStudentDto {
   @ApiProperty({ enum: ['M', 'F', 'Other'] })
   @IsEnum(['M', 'F', 'Other'])
   gender: 'M' | 'F' | 'Other';
-
-  @ApiProperty({
-    type: 'string',
-    format: 'binary',
-    required: true,
-  })
-  image: string;
 
   @ApiProperty()
   @IsOptional()
@@ -124,6 +117,27 @@ export class CreateStudentDto {
   @ValidateNested({ each: true })
   @Type(() => CreateContactPersonDto)
   contacts: CreateContactPersonDto[];
+
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: true,
+  })
+  image: string;
+
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+  })
+  imageContactPrimary: string;
+
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+  })
+  imageContactSecondary: string;
 }
 
 export class UpdateStudentDto extends PartialType(CreateStudentDto) {}

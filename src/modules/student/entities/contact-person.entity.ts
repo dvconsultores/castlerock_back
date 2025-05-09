@@ -26,4 +26,7 @@ export class ContactPersonEntity {
     onDelete: 'CASCADE',
   })
   student: StudentEntity;
+
+  @Column({ nullable: true })
+  image: string;
 }

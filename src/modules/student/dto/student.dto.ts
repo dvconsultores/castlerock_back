@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { DayOfWeekEnum } from '../../../shared/enums/days-of-week.enum';
 import { RelationshipType } from '../../../shared/enums/relationship-type.enum';
+import { ToArray } from '../../../helpers/decorators/to-array.decorator';
 
 export class CreateContactPersonDto {
   @ApiProperty()
@@ -65,18 +66,21 @@ export class CreateStudentDto {
   startDateOfClasses?: Date;
 
   @ApiProperty({ type: [String], enum: DayOfWeekEnum, isArray: true })
+  @ToArray()
   @IsArray()
   @IsEnum(DayOfWeekEnum, { each: true })
   daysEnrolled: DayOfWeekEnum[];
 
   @ApiPropertyOptional({ type: [String], enum: DayOfWeekEnum, isArray: true })
   @IsOptional()
+  @ToArray()
   @IsArray()
   @IsEnum(DayOfWeekEnum, { each: true })
   beforeSchoolDays?: DayOfWeekEnum[];
 
   @ApiPropertyOptional({ type: [String], enum: DayOfWeekEnum, isArray: true })
   @IsOptional()
+  @ToArray()
   @IsArray()
   @IsEnum(DayOfWeekEnum, { each: true })
   afterSchoolDays?: DayOfWeekEnum[];

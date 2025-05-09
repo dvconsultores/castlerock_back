@@ -32,8 +32,6 @@ export class CreateContactPersonDto {
   @IsEnum(['PRIMARY', 'SECONDARY', 'EMERGENCY_1', 'EMERGENCY_2'])
   role: 'PRIMARY' | 'SECONDARY' | 'EMERGENCY_1' | 'EMERGENCY_2';
 
-  @ApiProperty()
-  @IsString()
   image: string;
 }
 

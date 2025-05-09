@@ -113,7 +113,13 @@ export class StudentService {
     return student ? instanceToPlain(student) : null;
   }
 
-  async update(id: number, updateData: UpdateStudentDto, image?: Multer.File): Promise<void> {
+  async update(
+    id: number,
+    updateData: UpdateStudentDto,
+    image?: Multer.File,
+    imageContactPrimary?: Multer.File,
+    imageContactSecondary?: Multer.File,
+  ): Promise<void> {
     try {
       const student = await this.repository.findOne({ where: { id } });
 
@@ -133,6 +139,44 @@ export class StudentService {
 
       if (contacts) {
         await this.contactPersonRepository.delete({ student: { id } });
+
+        if (imageContactPrimary) {
+          const contactPrimary = contacts.find((contact) => contact.role === 'PRIMARY');
+
+          if (contactPrimary) {
+            contactPrimary.image = await this.storageService.upload(imageContactPrimary);
+          }
+
+          const contactPrimaryEntity = plainToClass(ContactPersonEntity, {
+            ...contactPrimary,
+            image: await this.storageService.upload(imageContactPrimary),
+          });
+
+          const contactPrimaryIndex = contacts.findIndex((contact) => contact.role === 'PRIMARY');
+
+          if (contactPrimaryIndex !== -1) {
+            contacts[contactPrimaryIndex] = contactPrimaryEntity;
+          }
+        }
+
+        if (imageContactSecondary) {
+          const contactSecondary = contacts.find((contact) => contact.role === 'SECONDARY');
+
+          if (contactSecondary) {
+            contactSecondary.image = await this.storageService.upload(imageContactSecondary);
+          }
+
+          const contactSecondaryEntity = plainToClass(ContactPersonEntity, {
+            ...contactSecondary,
+            image: await this.storageService.upload(imageContactSecondary),
+          });
+
+          const contactSecondaryIndex = contacts.findIndex((contact) => contact.role === 'SECONDARY');
+
+          if (contactSecondaryIndex !== -1) {
+            contacts[contactSecondaryIndex] = contactSecondaryEntity;
+          }
+        }
 
         student.contacts = contacts.map((contact) =>
           plainToClass(ContactPersonEntity, {

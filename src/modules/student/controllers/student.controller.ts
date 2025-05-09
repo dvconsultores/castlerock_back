@@ -80,14 +80,35 @@ export class StudentController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  @UseInterceptors(FileInterceptor('image'))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'image', maxCount: 1 },
+      { name: 'imageContactPrimary', maxCount: 1 },
+      { name: 'imageContactSecondary', maxCount: 1 },
+    ]),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'Update an student with image upload',
     type: UpdateStudentDto,
   })
-  async update(@Param('id') id: number, @Body() body: UpdateStudentDto) {
-    return this.studentService.update(id, body);
+  async update(
+    @Param('id') id: number,
+    @Body() body: UpdateStudentDto,
+    @UploadedFiles()
+    files: {
+      image?: Multer.File[];
+      imageContactPrimary?: Multer.File[];
+      imageContactSecondary?: Multer.File[];
+    },
+  ) {
+    return this.studentService.update(
+      id,
+      body,
+      files.image?.[0],
+      files.imageContactPrimary?.[0],
+      files.imageContactSecondary?.[0],
+    );
   }
 
   @Delete(':id')

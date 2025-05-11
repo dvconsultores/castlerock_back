@@ -1,13 +1,14 @@
 import { HttpException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { StudentEntity } from '../entities/student.entity';
-import { CreateStudentDto, UpdateStudentDto } from '../dto/student.dto';
+import { CreateStudentDto, FindStudentDtoQuery, UpdateStudentDto } from '../dto/student.dto';
 import { instanceToPlain, plainToClass } from 'class-transformer';
 import { ExceptionHandler } from '../../../helpers/handlers/exception.handler';
 import { ContactPersonEntity } from '../entities/contact-person.entity';
 import { StorageService } from '../../../shared/storage/storage.service';
 import { Multer } from 'multer';
+import { AdditionalProgramService } from '../../additional-program/services/additional-program.service';
 
 @Injectable()
 export class StudentService {
@@ -17,6 +18,7 @@ export class StudentService {
     @InjectRepository(ContactPersonEntity)
     private readonly contactPersonRepository: Repository<ContactPersonEntity>,
     private readonly storageService: StorageService,
+    private readonly additionalProgramService: AdditionalProgramService,
   ) {}
 
   async save(entity: StudentEntity): Promise<StudentEntity> {
@@ -74,22 +76,33 @@ export class StudentService {
       }
     }
 
-    const newEntity = plainToClass(StudentEntity, dto);
+    const additionalPrograms = await this.additionalProgramService.findByIds(dto.additionalProgramIds);
+
+    const newEntity = plainToClass(StudentEntity, {
+      ...dto,
+      additionalPrograms,
+    });
+
     const saved = await this.repository.save(newEntity);
     return instanceToPlain(saved);
   }
 
-  async findAll(campusId?: number): Promise<any[]> {
-    const query = this.repository
+  async findByParams(query: FindStudentDtoQuery): Promise<any[]> {
+    const queryBuilder = this.repository
       .createQueryBuilder('student')
       .leftJoinAndSelect('student.campus', 'campus')
+      .leftJoinAndSelect('student.contacts', 'contacts')
       .select(['student', 'campus.id', 'campus.name']);
 
-    if (campusId) {
-      query.where('campus.id = :campusId', { campusId });
+    if (query.campusId) {
+      queryBuilder.where('campus.id = :campusId', { campusId: query.campusId });
     }
 
-    const students = await query.getMany();
+    queryBuilder.andWhere('student.daysEnrolled LIKE :pattern', {
+      pattern: `%${query.dayEnrolled}%`,
+    });
+
+    const students = await queryBuilder.getMany();
     return students.map((student) => instanceToPlain(student));
   }
 
@@ -97,6 +110,7 @@ export class StudentService {
     const student = await this.repository
       .createQueryBuilder('student')
       .leftJoinAndSelect('student.campus', 'campus')
+      .leftJoinAndSelect('student.contacts', 'contacts')
       .select(['student', 'campus.id', 'campus.name'])
       .where('student.id = :id', { id })
       .getOne();
@@ -197,5 +211,11 @@ export class StudentService {
     if (deleteResult.affected === 0) {
       throw new NotFoundException('Student not found');
     }
+  }
+
+  async findByIds(ids: number[]): Promise<StudentEntity[]> {
+    const students = await this.repository.findBy({ id: In(ids) });
+
+    return students.map((student) => instanceToPlain(student)) as StudentEntity[];
   }
 }

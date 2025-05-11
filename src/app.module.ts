@@ -22,6 +22,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { MailModule } from './shared/mail/mail.module';
 import { AdditionalProgramModule } from './modules/additional-program/additional-program.module';
 import { StorageModule } from './shared/storage/storage.module';
+import { DailyScheduleModule } from './modules/daily-schedule/daily-schedule.module';
 
 @Module({
   imports: [
@@ -36,20 +37,21 @@ import { StorageModule } from './shared/storage/storage.module';
     AppConfigModule,
     CacheModule.register({ isGlobal: true }),
     TypeOrmModule.forRoot(DatabaseConfig.getDataSourceOptions()),
+    AuthModule,
     UtilsModule,
     LoggerModule,
     HttpCustomModule,
     UserModule,
+    TeacherModule,
     NotificationModule,
     CampusModule,
-    TeacherModule,
-    AuthModule,
     StudentModule,
     ClassModule,
     PlanningModule,
     AdditionalProgramModule,
     MailModule,
     StorageModule,
+    DailyScheduleModule,
   ],
   controllers: [AppController],
   providers: [

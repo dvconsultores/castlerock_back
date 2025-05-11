@@ -10,6 +10,8 @@ import {
 } from 'typeorm';
 import { CampusEntity } from '../../campus/entities/campus.entity';
 import { UserEntity } from '../../user/entities/user.entity';
+import { ClassEntity } from '../../class/entities/class.entity';
+import { DailyScheduleEntity } from '../../daily-schedule/entities/daily-schedule.entity';
 
 @Entity({ name: 'planning' })
 export class PlanningEntity {
@@ -18,6 +20,9 @@ export class PlanningEntity {
 
   @Column()
   year: number;
+
+  @Column()
+  month: number;
 
   @Column()
   week: number;
@@ -33,4 +38,12 @@ export class PlanningEntity {
 
   @ManyToOne(() => CampusEntity)
   campus: CampusEntity;
+
+  @ManyToOne(() => ClassEntity)
+  class: ClassEntity;
+
+  @OneToMany(() => DailyScheduleEntity, (dailySchedule) => dailySchedule.planning, {
+    cascade: true,
+  })
+  dailySchedules: DailyScheduleEntity[];
 }

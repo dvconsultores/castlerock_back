@@ -11,7 +11,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { DayOfWeekEnum } from '../../../shared/enums/days-of-week.enum';
+import { WeekDayEnum } from '../../../shared/enums/week-day.enum';
 import { RelationshipType } from '../../../shared/enums/relationship-type.enum';
 import { ToArray } from '../../../helpers/decorators/to-array.decorator';
 
@@ -66,44 +66,31 @@ export class CreateStudentDto {
   @Type(() => Date)
   startDateOfClasses?: Date;
 
-  @ApiProperty({ type: [String], enum: DayOfWeekEnum, isArray: true })
+  @ApiProperty({ type: [String], enum: WeekDayEnum, isArray: true })
   @ToArray()
   @IsArray()
-  @IsEnum(DayOfWeekEnum, { each: true })
-  daysEnrolled: DayOfWeekEnum[];
+  @IsEnum(WeekDayEnum, { each: true })
+  daysEnrolled: WeekDayEnum[];
 
-  @ApiPropertyOptional({ type: [String], enum: DayOfWeekEnum, isArray: true })
+  @ApiPropertyOptional({ type: [String], enum: WeekDayEnum, isArray: true })
   @IsOptional()
   @ToArray()
   @IsArray()
-  @IsEnum(DayOfWeekEnum, { each: true })
-  beforeSchoolDays?: DayOfWeekEnum[];
+  @IsEnum(WeekDayEnum, { each: true })
+  beforeSchoolDays?: WeekDayEnum[];
 
-  @ApiPropertyOptional({ type: [String], enum: DayOfWeekEnum, isArray: true })
+  @ApiPropertyOptional({ type: [String], enum: WeekDayEnum, isArray: true })
   @IsOptional()
   @ToArray()
   @IsArray()
-  @IsEnum(DayOfWeekEnum, { each: true })
-  afterSchoolDays?: DayOfWeekEnum[];
+  @IsEnum(WeekDayEnum, { each: true })
+  afterSchoolDays?: WeekDayEnum[];
 
-  @ApiPropertyOptional({
-    type: 'array',
-    items: {
-      type: 'object',
-      properties: {
-        programId: { type: 'number' },
-        sessions: { type: 'number' },
-        duration: { type: 'string' },
-      },
-    },
-  })
-  @IsOptional()
+  @ApiProperty()
   @IsArray()
-  additionalPrograms?: {
-    programId: number;
-    sessions: number;
-    duration: string;
-  }[];
+  @IsNumber({}, { each: true })
+  @Type(() => Number)
+  additionalProgramIds: number[];
 
   @ApiPropertyOptional()
   @IsNotEmpty()
@@ -139,3 +126,16 @@ export class CreateStudentDto {
 }
 
 export class UpdateStudentDto extends PartialType(CreateStudentDto) {}
+
+export class FindStudentDtoQuery {
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  campusId?: number;
+
+  @ApiProperty({ required: false, enum: WeekDayEnum })
+  @IsOptional()
+  @IsEnum(WeekDayEnum)
+  dayEnrolled?: WeekDayEnum;
+}

@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { AdditionalProgramEntity } from '../entities/additional-program.entity';
 import { CreateAdditionalProgramDto, UpdateAdditionalProgramDto } from '../dto/additional-program.dto';
 import { plainToClass } from 'class-transformer';
@@ -88,5 +88,9 @@ export class AdditionalProgramService {
     if (deleteResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }
+  }
+
+  async findByIds(ids: number[]): Promise<AdditionalProgramEntity[]> {
+    return await this.repository.findBy({ id: In(ids) });
   }
 }

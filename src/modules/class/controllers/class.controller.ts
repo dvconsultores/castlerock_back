@@ -49,14 +49,14 @@ export class ClassController {
     return this.classService.findAll(campusId);
   }
 
-  @Get(':id')
+  @Get(':classId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findOne(@Param('id') id: number) {
+  async findOne(@Param('classId') id: number) {
     return this.classService.findOne(id);
   }
 
-  @Patch(':id')
+  @Patch(':classId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
@@ -66,15 +66,15 @@ export class ClassController {
     description: 'Update an classroom with image upload',
     type: UpdateClassDto,
   })
-  async update(@Param('id') id: number, @Body() body: UpdateClassDto, @UploadedFile() image: Multer.File) {
+  async update(@Param('classId') id: number, @Body() body: UpdateClassDto, @UploadedFile() image: Multer.File) {
     return this.classService.update(id, body, image);
   }
 
-  @Delete(':id')
+  @Delete(':classId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async remove(@Param('id') id: number) {
+  async remove(@Param('classId') id: number) {
     return this.classService.remove(id);
   }
 }

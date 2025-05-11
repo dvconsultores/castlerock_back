@@ -48,14 +48,14 @@ export class UserController {
     return this.userService.findAll();
   }
 
-  @Get(':id')
+  @Get(':userId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findOne(@Param('id') id: number) {
+  async findOne(@Param('userId') id: number) {
     return this.userService.findOne(id);
   }
 
-  @Patch(':id')
+  @Patch(':userId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
@@ -65,15 +65,15 @@ export class UserController {
     description: 'Update a user with image upload',
     type: UpdateUserDto,
   })
-  async update(@Param('id') id: number, @Body() body: UpdateUserDto, @UploadedFile() image: Multer.File) {
+  async update(@Param('userId') id: number, @Body() body: UpdateUserDto, @UploadedFile() image: Multer.File) {
     return this.userService.update(id, body, image);
   }
 
-  @Delete(':id')
+  @Delete(':userId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async remove(@Param('id') id: number) {
+  async remove(@Param('userId') id: number) {
     return this.userService.remove(id);
   }
 }

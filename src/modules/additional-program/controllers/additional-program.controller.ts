@@ -49,14 +49,14 @@ export class AdditionalProgramController {
     return this.additionalProgramService.findAll(campusId);
   }
 
-  @Get(':id')
+  @Get(':additionalProgramId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findOne(@Param('id') id: number) {
+  async findOne(@Param('additionalProgramId') id: number) {
     return this.additionalProgramService.findOne(id);
   }
 
-  @Patch(':id')
+  @Patch(':additionalProgramId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
@@ -66,15 +66,19 @@ export class AdditionalProgramController {
     description: 'Update an additional program with image upload',
     type: UpdateAdditionalProgramDto,
   })
-  async update(@Param('id') id: number, @Body() body: UpdateAdditionalProgramDto, @UploadedFile() image: Multer.File) {
+  async update(
+    @Param('additionalProgramId') id: number,
+    @Body() body: UpdateAdditionalProgramDto,
+    @UploadedFile() image: Multer.File,
+  ) {
     return this.additionalProgramService.update(id, body, image);
   }
 
-  @Delete(':id')
+  @Delete(':additionalProgramId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async remove(@Param('id') id: number) {
+  async remove(@Param('additionalProgramId') id: number) {
     return this.additionalProgramService.remove(id);
   }
 }

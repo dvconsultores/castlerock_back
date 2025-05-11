@@ -11,9 +11,10 @@ import {
   Put,
   UseGuards,
   Req,
+  ValidationPipe,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { CreatePlanningDto, UpdatePlanningDto } from '../dto/planning.dto';
+import { CreatePlanningDto, FindPlanningDtoQuery, UpdatePlanningDto } from '../dto/planning.dto';
 import { PlanningService } from '../services/planning.service';
 import { AuthGuard } from '../../../helpers/guards/auth.guard';
 import { UserRole } from '../../../shared/enums/user-role.enum';
@@ -31,7 +32,7 @@ export class PlanningController {
   async create(@Body() body: CreatePlanningDto, @Req() req: Request) {
     const user = req['user'];
 
-    return this.planningService.create(body, user.id);
+    return this.planningService.create(body);
   }
 
   @Get()
@@ -41,26 +42,26 @@ export class PlanningController {
     return this.planningService.findAll();
   }
 
-  @Get(':id')
+  @Get('search')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findOne(@Param('id') id: number) {
-    return this.planningService.findOne(id);
+  async findByParams(@Query(new ValidationPipe({ transform: true })) query: FindPlanningDtoQuery) {
+    return this.planningService.findByParams(query);
   }
 
-  @Patch(':id')
+  @Patch(':planningId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async update(@Param('id') id: number, @Body() body: UpdatePlanningDto) {
+  async update(@Param('planningId') id: number, @Body() body: UpdatePlanningDto) {
     return this.planningService.update(id, body);
   }
 
-  @Delete(':id')
+  @Delete(':planningId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async remove(@Param('id') id: number) {
+  async remove(@Param('planningId') id: number) {
     return this.planningService.remove(id);
   }
 }

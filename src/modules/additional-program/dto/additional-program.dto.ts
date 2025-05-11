@@ -13,7 +13,7 @@ import {
   IsArray,
 } from 'class-validator';
 import { ProgramType } from '../../../shared/enums/program-type.enum';
-import { DayOfWeekEnum } from '../../../shared/enums/days-of-week.enum';
+import { WeekDayEnum } from '../../../shared/enums/week-day.enum';
 import { StringToNumber } from '../../../helpers/decorators/string-to-number.decorator';
 import { ToArray } from '../../../helpers/decorators/to-array.decorator';
 
@@ -29,11 +29,11 @@ export class CreateAdditionalProgramDto {
   @IsNumber()
   campus: number;
 
-  @ApiProperty({ type: [String], enum: DayOfWeekEnum, isArray: true })
+  @ApiProperty({ type: [String], enum: WeekDayEnum, isArray: true })
   @ToArray()
   @IsArray()
-  @IsEnum(DayOfWeekEnum, { each: true })
-  days: DayOfWeekEnum[];
+  @IsEnum(WeekDayEnum, { each: true })
+  days: WeekDayEnum[];
 
   @ApiProperty({
     type: 'string',

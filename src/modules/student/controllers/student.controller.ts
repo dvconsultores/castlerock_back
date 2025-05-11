@@ -13,9 +13,10 @@ import {
   UseInterceptors,
   UploadedFile,
   UploadedFiles,
+  ValidationPipe,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { CreateStudentDto, UpdateStudentDto } from '../dto/student.dto';
+import { CreateStudentDto, FindStudentDtoQuery, UpdateStudentDto } from '../dto/student.dto';
 import { StudentService } from '../services/student.service';
 import { AuthGuard } from '../../../helpers/guards/auth.guard';
 import { UserRole } from '../../../shared/enums/user-role.enum';
@@ -64,19 +65,18 @@ export class StudentController {
   @Get()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @ApiQuery({ name: 'campus', required: false, type: Number, description: 'Campus ID' })
-  async findAll(@Query('campus') campusId?: number) {
-    return this.studentService.findAll(campusId);
+  async findByParams(@Query(new ValidationPipe({ transform: true })) query: FindStudentDtoQuery) {
+    return this.studentService.findByParams(query);
   }
 
-  @Get(':id')
+  @Get(':studentId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findOne(@Param('id') id: number) {
+  async findOne(@Param('studentId') id: number) {
     return this.studentService.findOne(id);
   }
 
-  @Patch(':id')
+  @Patch(':studentId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
@@ -93,7 +93,7 @@ export class StudentController {
     type: UpdateStudentDto,
   })
   async update(
-    @Param('id') id: number,
+    @Param('studentId') id: number,
     @Body() body: UpdateStudentDto,
     @UploadedFiles()
     files: {
@@ -111,11 +111,11 @@ export class StudentController {
     );
   }
 
-  @Delete(':id')
+  @Delete(':studentId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async remove(@Param('id') id: number) {
+  async remove(@Param('studentId') id: number) {
     return this.studentService.remove(id);
   }
 }

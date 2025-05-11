@@ -8,13 +8,16 @@ import {
   OneToOne,
   JoinColumn,
   UpdateDateColumn,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 import { CampusEntity } from '../../campus/entities/campus.entity';
 import { ContactPersonEntity } from './contact-person.entity';
 import { IsArray, IsEnum, IsOptional } from 'class-validator';
-import { DayOfWeekEnum } from '../../../shared/enums/days-of-week.enum';
+import { WeekDayEnum } from '../../../shared/enums/week-day.enum';
 import { ProgramType } from '../../../shared/enums/program-type.enum';
 import { Expose } from 'class-transformer';
+import { AdditionalProgramEntity } from '../../additional-program/entities/additional-program.entity';
 
 @Entity('students')
 export class StudentEntity {
@@ -41,7 +44,6 @@ export class StudentEntity {
 
   @OneToMany(() => ContactPersonEntity, (contact) => contact.student, {
     cascade: true,
-    eager: true,
   })
   contacts: ContactPersonEntity[];
 
@@ -50,23 +52,24 @@ export class StudentEntity {
 
   @Column('simple-array', { name: 'days_enrolled' })
   @IsArray()
-  @IsEnum(DayOfWeekEnum, { each: true })
-  daysEnrolled: DayOfWeekEnum[];
+  @IsEnum(WeekDayEnum, { each: true })
+  daysEnrolled: WeekDayEnum[];
 
   @Column('simple-array', { nullable: true, name: 'before_school_days' })
   @IsOptional()
   @IsArray()
-  @IsEnum(DayOfWeekEnum, { each: true })
-  beforeSchoolDays: DayOfWeekEnum[];
+  @IsEnum(WeekDayEnum, { each: true })
+  beforeSchoolDays: WeekDayEnum[];
 
   @Column('simple-array', { nullable: true, name: 'after_school_days' })
   @IsOptional()
   @IsArray()
-  @IsEnum(DayOfWeekEnum, { each: true })
-  afterSchoolDays: DayOfWeekEnum[];
+  @IsEnum(WeekDayEnum, { each: true })
+  afterSchoolDays: WeekDayEnum[];
 
-  @Column('simple-json', { nullable: true, name: 'additional_programs' })
-  additionalPrograms: { programId: number; sessions: number; duration: string }[];
+  @ManyToMany(() => AdditionalProgramEntity)
+  @JoinTable()
+  additionalPrograms: AdditionalProgramEntity[];
 
   @ManyToOne(() => CampusEntity, (campus) => campus.students, { nullable: true, onDelete: 'SET NULL' })
   campus: CampusEntity;

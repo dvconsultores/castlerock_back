@@ -12,6 +12,7 @@ import {
   IsNumber,
 } from 'class-validator';
 import { ProgramType } from '../../../shared/enums/program-type.enum';
+import { StringToNumber } from '../../../helpers/decorators/string-to-number.decorator';
 
 export class CreateClassDto {
   @ApiProperty()
@@ -21,11 +22,13 @@ export class CreateClassDto {
 
   @ApiProperty()
   @IsNotEmpty()
+  @StringToNumber()
   @IsInt()
   maxCapacity: number;
 
   @ApiProperty()
   @IsNotEmpty()
+  @StringToNumber()
   @IsNumber()
   campus: number;
 
@@ -57,11 +60,13 @@ export class UpdateClassDto {
 
   @ApiProperty()
   @IsOptional()
+  @StringToNumber()
   @IsInt()
   maxCapacity?: number;
 
   @ApiProperty()
   @IsOptional()
+  @StringToNumber()
   @IsNumber()
   campus?: number;
 

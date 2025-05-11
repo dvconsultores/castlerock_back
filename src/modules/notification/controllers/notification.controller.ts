@@ -35,22 +35,22 @@ export class NotificationController {
     return this.notificationService.findByUserId(user.id);
   }
 
-  // @Get(':id')
-  // async findOne(@Param('id') id: number) {
+  // @Get(':notificationId')
+  // async findOne(@Param('notificationId') id: number) {
   //   return this.notificationService.findOne(id);
   // }
 
-  @Patch(':id')
+  @Patch(':notificationId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async update(@Param('id') id: number, @Body() body: UpdateNotificationDto) {
+  async update(@Param('notificationId') id: number, @Body() body: UpdateNotificationDto) {
     return this.notificationService.update(id, body);
   }
 
-  @Delete(':id')
+  @Delete(':notificationId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async remove(@Param('id') id: number) {
+  async remove(@Param('notificationId') id: number) {
     return this.notificationService.remove(id);
   }
 }

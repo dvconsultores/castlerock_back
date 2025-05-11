@@ -6,9 +6,16 @@ import { DailyScheduleController } from './controllers/daily-schedule.controller
 import { PlanningModule } from '../planning/planning.module';
 import { TeacherModule } from '../teacher/teacher.module';
 import { StudentModule } from '../student/student.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([DailyScheduleEntity]), PlanningModule, TeacherModule, StudentModule],
+  imports: [
+    TypeOrmModule.forFeature([DailyScheduleEntity]),
+    PlanningModule,
+    TeacherModule,
+    StudentModule,
+    NotificationModule,
+  ],
   exports: [DailyScheduleService],
   controllers: [DailyScheduleController],
   providers: [DailyScheduleService],

@@ -31,4 +31,7 @@ export class DailyScheduleEntity {
 
   @ManyToOne(() => UserEntity, { nullable: false })
   admin: UserEntity;
+
+  @Column({ nullable: true })
+  notes: string;
 }

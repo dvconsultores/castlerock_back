@@ -33,14 +33,14 @@ export class UserService {
 
   async findAll(): Promise<Partial<UserEntity>[]> {
     return await this.repository.find({
-      select: ['id', 'firstName', 'lastName', 'email'],
+      select: ['id', 'firstName', 'lastName', 'email', 'image', 'role', 'phone'],
     });
   }
 
   async findOne(id: number): Promise<UserEntity | null> {
     return await this.repository.findOne({
       where: { id },
-      select: ['id', 'firstName', 'lastName', 'email'],
+      select: ['id', 'firstName', 'lastName', 'email', 'image', 'role', 'phone'],
     });
   }
 
@@ -60,14 +60,14 @@ export class UserService {
 
     const updateResult = await this.repository.update({ id }, updateData);
     if (updateResult.affected === 0) {
-      throw new NotFoundException('Item no encontrado');
+      throw new NotFoundException('Item not found');
     }
   }
 
   async remove(id: number): Promise<void> {
     const deleteResult = await this.repository.delete({ id });
     if (deleteResult.affected === 0) {
-      throw new NotFoundException('Item no encontrado');
+      throw new NotFoundException('Item not found');
     }
   }
 }

@@ -20,8 +20,8 @@ import { AuthGuard } from '../../../helpers/guards/auth.guard';
 import { UserRole } from '../../../shared/enums/user-role.enum';
 import { Roles } from '../../../helpers/decorators/roles.decorator';
 
-@ApiTags('Plannings')
-@Controller('plannings')
+@ApiTags('Planning')
+@Controller('planning')
 export class PlanningController {
   constructor(private readonly planningService: PlanningService) {}
 

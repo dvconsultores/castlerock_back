@@ -44,7 +44,7 @@ export class PlanningService {
   }
 
   async create(dto: CreatePlanningDto): Promise<any> {
-    const planningFound = await this.findByParams({
+    const planningFound = await this.findOneByParams({
       campus: dto.campus,
       class: dto.class,
       year: dto.year,
@@ -103,6 +103,30 @@ export class PlanningService {
     };
 
     return await this.repository.find({
+      where: filters,
+      relations: [
+        'campus',
+        'class',
+        'dailySchedules',
+        'dailySchedules.teacher',
+        'dailySchedules.students',
+        'dailySchedules.teacher.user',
+      ],
+    });
+  }
+
+  async findOneByParams(query: FindPlanningDtoQuery): Promise<PlanningEntity | null> {
+    const { campus, class: classId, year, month, week } = query;
+
+    const filters = {
+      campus: { id: campus },
+      class: { id: classId },
+      year,
+      month,
+      ...(week !== undefined && { week }),
+    };
+
+    return await this.repository.findOne({
       where: filters,
       relations: ['campus', 'class', 'dailySchedules', 'dailySchedules.teacher', 'dailySchedules.students'],
     });

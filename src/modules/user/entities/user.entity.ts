@@ -40,9 +40,6 @@ export class UserEntity {
   @Column({ type: 'enum', enum: UserRole })
   role: UserRole;
 
-  @OneToMany(() => NotificationEntity, (notification) => notification.user)
-  notifications: NotificationEntity[];
-
   @Column({ name: 'reset_token', nullable: true })
   resetToken?: string;
 

@@ -17,6 +17,7 @@ import { addDays, format } from 'date-fns';
 import { PlanningService } from '../../planning/services/planning.service';
 import { TeacherService } from '../../teacher/services/teacher.service';
 import { StudentService } from '../../student/services/student.service';
+import { NotificationService } from '../../notification/services/notification.service';
 
 @Injectable()
 export class DailyScheduleService {
@@ -26,6 +27,7 @@ export class DailyScheduleService {
     private readonly planningService: PlanningService,
     private readonly teacherService: TeacherService,
     private readonly studentService: StudentService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async save(entity: DailyScheduleEntity): Promise<DailyScheduleEntity> {
@@ -80,7 +82,7 @@ export class DailyScheduleService {
     const baseDate = new Date(planning.startDate);
     const date = addDays(baseDate, dayIndex);
 
-    const dailySchedule = plainToClass(DailyScheduleEntity, {
+    const dailyScheduleEntity = plainToClass(DailyScheduleEntity, {
       planning,
       teacher,
       students,
@@ -89,7 +91,15 @@ export class DailyScheduleService {
       admin: adminId,
     });
 
-    return await this.dailyScheduleRepository.save(dailySchedule);
+    const dailySchedule = await this.dailyScheduleRepository.save(dailyScheduleEntity);
+
+    await this.notificationService.create({
+      title: 'New Daily Schedule',
+      message: `You have a new daily schedule for ${dto.day} in ${planning.class.name}`,
+      userId: teacher.id,
+    });
+
+    return dailySchedule;
   }
 
   async findOne(id: number): Promise<DailyScheduleEntity | null> {
@@ -98,7 +108,7 @@ export class DailyScheduleService {
 
   async findAll(): Promise<DailyScheduleEntity[]> {
     return await this.dailyScheduleRepository.find({
-      // relations: ['planning', 'teacher', 'students'],
+      relations: ['planning', 'teacher', 'students'],
     });
   }
 

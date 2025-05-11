@@ -23,6 +23,7 @@ import { MailModule } from './shared/mail/mail.module';
 import { AdditionalProgramModule } from './modules/additional-program/additional-program.module';
 import { StorageModule } from './shared/storage/storage.module';
 import { DailyScheduleModule } from './modules/daily-schedule/daily-schedule.module';
+import { AttendanceModule } from './modules/attendance/attendance.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { DailyScheduleModule } from './modules/daily-schedule/daily-schedule.mod
     MailModule,
     StorageModule,
     DailyScheduleModule,
+    AttendanceModule,
   ],
   controllers: [AppController],
   providers: [

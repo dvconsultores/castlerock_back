@@ -7,7 +7,7 @@ export class ContactPersonEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ name: 'full_name' })
   fullName: string;
 
   @Column()

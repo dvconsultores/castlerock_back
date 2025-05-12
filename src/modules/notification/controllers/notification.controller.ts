@@ -23,10 +23,10 @@ import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
-  // @Post()
-  // async create(@Body() body: CreateNotificationDto) {
-  //   return this.notificationService.create(body);
-  // }
+  @Post()
+  async create(@Body() body: CreateNotificationDto) {
+    return this.notificationService.create(body);
+  }
 
   @Get()
   @UseGuards(AuthGuard)

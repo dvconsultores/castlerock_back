@@ -94,6 +94,7 @@ export class CreateStudentDto {
 
   @ApiPropertyOptional()
   @IsNotEmpty()
+  @Type(() => Number)
   @IsNumber()
   campus: string;
 

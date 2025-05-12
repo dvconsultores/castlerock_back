@@ -42,6 +42,7 @@ export class ClassService {
   async findOne(id: number): Promise<ClassEntity | null> {
     return await this.repository.findOne({
       where: { id },
+      relations: ['campus'],
     });
   }
 

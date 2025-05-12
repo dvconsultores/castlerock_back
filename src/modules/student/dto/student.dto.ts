@@ -9,7 +9,7 @@ import {
   IsNumber,
   IsNotEmpty,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { WeekDayEnum } from '../../../shared/enums/week-day.enum';
 import { RelationshipType } from '../../../shared/enums/relationship-type.enum';
@@ -87,18 +87,41 @@ export class CreateStudentDto {
   afterSchoolDays?: WeekDayEnum[];
 
   @ApiProperty()
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) return value.map(Number);
+    if (typeof value === 'string') return value.split(',').map(Number);
+    return [];
+  })
   @IsArray()
   @IsNumber({}, { each: true })
-  @Type(() => Number)
   additionalProgramIds: number[];
 
-  @ApiPropertyOptional()
-  @IsNotEmpty()
-  @Type(() => Number)
+  @ApiProperty()
   @IsNumber()
-  campus: string;
+  @Type(() => Number)
+  campus: number;
 
   @ApiProperty({ type: [CreateContactPersonDto] })
+  @Transform(({ value }) => {
+    try {
+      if (!value) return [];
+
+      if (typeof value === 'string') {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [parsed];
+      }
+
+      if (Array.isArray(value)) {
+        const flattened = value.flat();
+        return flattened.map((item) => (typeof item === 'string' ? JSON.parse(item) : item));
+      }
+
+      return [];
+    } catch (err) {
+      console.error('Failed to transform contacts:', err);
+      return [];
+    }
+  })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateContactPersonDto)

@@ -31,60 +31,41 @@ export class StudentService {
     imageContactPrimary?: Multer.File,
     imageContactSecondary?: Multer.File,
   ): Promise<any> {
-    let imageUrl: string | null = null;
-
-    if (image) {
-      imageUrl = await this.storageService.upload(image);
-      dto.image = imageUrl;
-    }
-
-    if (imageContactPrimary) {
-      const contactPrimary = dto.contacts.find((contact) => contact.role === 'PRIMARY');
-
-      if (contactPrimary) {
-        contactPrimary.image = await this.storageService.upload(imageContactPrimary);
+    try {
+      if (image) {
+        const imageUrl = await this.storageService.upload(image);
+        dto.image = imageUrl;
       }
 
-      const contactPrimaryEntity = plainToClass(ContactPersonEntity, {
-        ...contactPrimary,
-        image: await this.storageService.upload(imageContactPrimary),
+      if (imageContactPrimary) {
+        const index = dto.contacts.findIndex((contact) => contact.role === 'PRIMARY');
+        if (index !== -1) {
+          const uploaded = await this.storageService.upload(imageContactPrimary);
+          dto.contacts[index].image = uploaded;
+        }
+      }
+
+      if (imageContactSecondary) {
+        const index = dto.contacts.findIndex((contact) => contact.role === 'SECONDARY');
+        if (index !== -1) {
+          const uploaded = await this.storageService.upload(imageContactSecondary);
+          dto.contacts[index].image = uploaded;
+        }
+      }
+
+      const additionalPrograms = await this.additionalProgramService.findByIds(dto.additionalProgramIds);
+
+      const newEntity = plainToClass(StudentEntity, {
+        ...dto,
+        additionalPrograms,
       });
 
-      const contactPrimaryIndex = dto.contacts.findIndex((contact) => contact.role === 'PRIMARY');
+      const saved = await this.repository.save(newEntity);
 
-      if (contactPrimaryIndex !== -1) {
-        dto.contacts[contactPrimaryIndex] = contactPrimaryEntity;
-      }
+      return instanceToPlain(saved);
+    } catch (error) {
+      throw new ExceptionHandler(error);
     }
-
-    if (imageContactSecondary) {
-      const contactSecondary = dto.contacts.find((contact) => contact.role === 'SECONDARY');
-
-      if (contactSecondary) {
-        contactSecondary.image = await this.storageService.upload(imageContactSecondary);
-      }
-
-      const contactSecondaryEntity = plainToClass(ContactPersonEntity, {
-        ...contactSecondary,
-        image: await this.storageService.upload(imageContactSecondary),
-      });
-
-      const contactSecondaryIndex = dto.contacts.findIndex((contact) => contact.role === 'SECONDARY');
-
-      if (contactSecondaryIndex !== -1) {
-        dto.contacts[contactSecondaryIndex] = contactSecondaryEntity;
-      }
-    }
-
-    const additionalPrograms = await this.additionalProgramService.findByIds(dto.additionalProgramIds);
-
-    const newEntity = plainToClass(StudentEntity, {
-      ...dto,
-      additionalPrograms,
-    });
-
-    const saved = await this.repository.save(newEntity);
-    return instanceToPlain(saved);
   }
 
   async findByParams(query: FindStudentDtoQuery): Promise<any[]> {

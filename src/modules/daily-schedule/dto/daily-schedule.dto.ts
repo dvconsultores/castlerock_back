@@ -35,6 +35,11 @@ export class CreateDailyScheduleDto {
   @IsNumber({}, { each: true })
   @Type(() => Number)
   studentIds: number[];
+
+  @ApiProperty()
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }
 
 export class UpdateDailyScheduleDto {
@@ -61,4 +66,9 @@ export class UpdateDailyScheduleDto {
   @IsNumber({}, { each: true })
   @Type(() => Number)
   studentIds?: number[];
+
+  @ApiProperty()
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }

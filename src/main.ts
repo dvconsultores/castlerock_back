@@ -77,7 +77,13 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/swagger', app, document);
+  SwaggerModule.setup('api/swagger', app, document, {
+    swaggerOptions: {
+      docExpansion: 'none',
+      persistAuthorization: true,
+      cacheControl: false,
+    },
+  });
 
   // await app.listen(port);
   await app.listen(port, '0.0.0.0');

@@ -79,9 +79,11 @@ export class StudentService {
       queryBuilder.where('campus.id = :campusId', { campusId: query.campusId });
     }
 
-    queryBuilder.andWhere('student.daysEnrolled LIKE :pattern', {
-      pattern: `%${query.dayEnrolled}%`,
-    });
+    if (query.dayEnrolled) {
+      queryBuilder.andWhere('student.daysEnrolled LIKE :pattern', {
+        pattern: `%${query.dayEnrolled}%`,
+      });
+    }
 
     const students = await queryBuilder.getMany();
     return students.map((student) => instanceToPlain(student));

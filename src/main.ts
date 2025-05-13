@@ -70,7 +70,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Kindergarten API')
     .setDescription('Kindergarten API Documentation')
-    .setVersion('1.1')
+    .setVersion('1')
     .addServer('/kindergarten')
     .addServer('/')
     .addBearerAuth()

@@ -73,7 +73,8 @@ export class StudentService {
       .createQueryBuilder('student')
       .leftJoinAndSelect('student.campus', 'campus')
       .leftJoinAndSelect('student.contacts', 'contacts')
-      .select(['student', 'campus.id', 'campus.name']);
+      .leftJoinAndSelect('student.additionalPrograms', 'additionalPrograms')
+      .select(['student', 'campus.id', 'campus.name', 'contacts', 'additionalPrograms']);
 
     if (query.campusId) {
       queryBuilder.where('campus.id = :campusId', { campusId: query.campusId });
@@ -94,7 +95,8 @@ export class StudentService {
       .createQueryBuilder('student')
       .leftJoinAndSelect('student.campus', 'campus')
       .leftJoinAndSelect('student.contacts', 'contacts')
-      .select(['student', 'campus.id', 'campus.name'])
+      .leftJoinAndSelect('student.additionalPrograms', 'additionalPrograms')
+      .select(['student', 'campus.id', 'campus.name', 'contacts', 'additionalPrograms'])
       .where('student.id = :id', { id })
       .getOne();
 

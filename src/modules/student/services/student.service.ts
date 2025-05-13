@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { StudentEntity } from '../entities/student.entity';
 import { CreateStudentDto, FindStudentDtoQuery, UpdateStudentDto } from '../dto/student.dto';
 import { instanceToPlain, plainToClass } from 'class-transformer';
@@ -137,52 +137,43 @@ export class StudentService {
       Object.assign(student, rest);
 
       if (contacts) {
-        await this.contactPersonRepository.delete({ student: { id } });
+        const rolesInPayload = contacts.map((c) => c.role);
 
-        if (imageContactPrimary) {
-          const contactPrimary = contacts.find((contact) => contact.role === 'PRIMARY');
+        await this.contactPersonRepository.delete({
+          student: { id },
+          role: Not(In(rolesInPayload)),
+        });
 
-          if (contactPrimary) {
-            contactPrimary.image = await this.storageService.upload(imageContactPrimary);
+        for (const contactData of contacts) {
+          const { role } = contactData;
+
+          if (role === 'PRIMARY' && imageContactPrimary) {
+            contactData.image = await this.storageService.upload(imageContactPrimary);
+          } else if (role === 'SECONDARY' && imageContactSecondary) {
+            contactData.image = await this.storageService.upload(imageContactSecondary);
           }
 
-          const contactPrimaryEntity = plainToClass(ContactPersonEntity, {
-            ...contactPrimary,
-            image: await this.storageService.upload(imageContactPrimary),
+          let existingContact = await this.contactPersonRepository.findOne({
+            where: {
+              student: { id },
+              role,
+            },
           });
 
-          const contactPrimaryIndex = contacts.findIndex((contact) => contact.role === 'PRIMARY');
-
-          if (contactPrimaryIndex !== -1) {
-            contacts[contactPrimaryIndex] = contactPrimaryEntity;
+          if (existingContact) {
+            Object.assign(existingContact, {
+              ...contactData,
+              student: { id },
+            });
+            await this.contactPersonRepository.save(existingContact);
+          } else {
+            const newContact = plainToClass(ContactPersonEntity, {
+              ...contactData,
+              student: { id },
+            });
+            await this.contactPersonRepository.save(newContact);
           }
         }
-
-        if (imageContactSecondary) {
-          const contactSecondary = contacts.find((contact) => contact.role === 'SECONDARY');
-
-          if (contactSecondary) {
-            contactSecondary.image = await this.storageService.upload(imageContactSecondary);
-          }
-
-          const contactSecondaryEntity = plainToClass(ContactPersonEntity, {
-            ...contactSecondary,
-            image: await this.storageService.upload(imageContactSecondary),
-          });
-
-          const contactSecondaryIndex = contacts.findIndex((contact) => contact.role === 'SECONDARY');
-
-          if (contactSecondaryIndex !== -1) {
-            contacts[contactSecondaryIndex] = contactSecondaryEntity;
-          }
-        }
-
-        student.contacts = contacts.map((contact) =>
-          plainToClass(ContactPersonEntity, {
-            ...contact,
-            student: { id },
-          }),
-        );
       }
 
       await this.repository.save(student);

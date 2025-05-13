@@ -19,7 +19,10 @@ export class ContactPersonEntity {
   })
   relation: RelationshipType;
 
-  @Column()
+  @Column({
+    type: 'enum',
+    enum: ['PRIMARY', 'SECONDARY', 'EMERGENCY_1', 'EMERGENCY_2'],
+  })
   role: 'PRIMARY' | 'SECONDARY' | 'EMERGENCY_1' | 'EMERGENCY_2';
 
   @ManyToOne(() => StudentEntity, (student) => student.contacts, {

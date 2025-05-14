@@ -76,7 +76,7 @@ export class PlanningController {
   @Get(':planningId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findOne(@Param('planningId', ParseUUIDPipe) id: number) {
+  async findOne(@Param('planningId') id: number) {
     return this.planningService.findOne(id);
   }
 

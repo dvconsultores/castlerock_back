@@ -75,6 +75,7 @@ export class AuthService {
       id: user.id,
       email: user.email,
       role: user.role,
+      image: user.image,
       accessToken: this.jwtService.sign(payload, { expiresIn: '7d' }),
       campus,
     };

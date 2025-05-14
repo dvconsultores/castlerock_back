@@ -73,6 +73,13 @@ export class PlanningController {
     return this.planningService.findByParams(query);
   }
 
+  @Get(':planningId')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  async findOne(@Param('planningId', ParseUUIDPipe) id: number) {
+    return this.planningService.findOne(id);
+  }
+
   @Patch(':planningId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()

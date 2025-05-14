@@ -34,20 +34,28 @@ export class PlanningController {
     if (body.week) {
       return this.planningService.create(body);
     } else {
-      const plannings: PlanningEntity[] = [];
+      const promises: any[] = [];
 
       for (let i = 1; i <= 6; i++) {
         const newBody = { ...body, week: i };
-
-        try {
-          const created = await this.planningService.create(newBody);
-          plannings.push(created);
-        } catch (error) {
-          console.log(`Error creating planning for week ${i}:`, error);
-        }
+        promises.push(this.planningService.create(newBody));
       }
 
-      return plannings;
+      const results = await Promise.allSettled(promises);
+
+      const successfulPlannings: PlanningEntity[] = [];
+      const failedWeeks: number[] = [];
+
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          successfulPlannings.push(result.value);
+        } else {
+          failedWeeks.push(index + 1);
+          console.error(`Error in week ${index + 1}:`, result.reason);
+        }
+      });
+
+      return successfulPlannings;
     }
   }
 

@@ -28,10 +28,10 @@ export class CreatePlanningDto {
   @IsNumber()
   month: number;
 
-  @ApiProperty()
-  @IsNotEmpty()
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsNumber()
-  week: number;
+  week?: number;
 
   @ApiProperty()
   @IsNotEmpty()

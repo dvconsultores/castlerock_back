@@ -19,6 +19,7 @@ import { PlanningService } from '../services/planning.service';
 import { AuthGuard } from '../../../helpers/guards/auth.guard';
 import { UserRole } from '../../../shared/enums/user-role.enum';
 import { Roles } from '../../../helpers/decorators/roles.decorator';
+import { PlanningEntity } from '../entities/planning.entity';
 
 @ApiTags('Planning')
 @Controller('planning')
@@ -30,9 +31,24 @@ export class PlanningController {
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
   async create(@Body() body: CreatePlanningDto, @Req() req: Request) {
-    const user = req['user'];
+    if (body.week) {
+      return this.planningService.create(body);
+    } else {
+      const plannings: PlanningEntity[] = [];
 
-    return this.planningService.create(body);
+      for (let i = 1; i <= 6; i++) {
+        const newBody = { ...body, week: i };
+
+        try {
+          const created = await this.planningService.create(newBody);
+          plannings.push(created);
+        } catch (error) {
+          console.log(`Error creating planning for week ${i}:`, error);
+        }
+      }
+
+      return plannings;
+    }
   }
 
   @Get()

@@ -43,7 +43,7 @@ export class PlanningService {
     return await this.repository.save(entity);
   }
 
-  async create(dto: CreatePlanningDto): Promise<any> {
+  async create(dto: CreatePlanningDto): Promise<PlanningEntity> {
     const planningFound = await this.findOneByParams({
       campus: dto.campus,
       class: dto.class,
@@ -68,12 +68,12 @@ export class PlanningService {
       throw new NotFoundException('Clase not found');
     }
 
-    const { startDate, endDate } = this.getWeekRange(dto.year, dto.month, dto.week);
+    const { startDate, endDate } = this.getWeekRange(dto.year, dto.month, dto.week!);
 
     const planningDto: PlanningDto = {
       year: dto.year,
       month: dto.month,
-      week: dto.week,
+      week: dto.week!,
       startDate,
       endDate,
       campus,

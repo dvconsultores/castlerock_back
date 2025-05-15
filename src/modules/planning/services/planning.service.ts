@@ -162,34 +162,36 @@ export class PlanningService {
 
   private getWeekRange(year: number, month: number, weekNumber: number): { startDate: string; endDate: string } {
     const baseDate = new Date(Date.UTC(year, month - 1, 1));
-    const baseMonth = baseDate.getUTCMonth();
+    const targetMonth = baseDate.getUTCMonth();
 
-    let current = baseDate;
-    let weekCount = 0;
-
-    while (current.getUTCDay() !== 1) {
-      current = addDays(current, 1);
-      if (current.getUTCMonth() !== baseMonth) {
-        throw new BadRequestException('The specified month does not contain a Monday');
-      }
+    let firstFriday = baseDate;
+    while (firstFriday.getUTCDay() !== 5) {
+      firstFriday = addDays(firstFriday, 1);
     }
 
-    while (current.getUTCMonth() === baseMonth) {
-      weekCount++;
+    let currentMonday = startOfWeek(firstFriday, { weekStartsOn: 1 });
 
-      if (weekCount === weekNumber) {
-        const startDate = current;
-        const endDate = endOfWeek(current, { weekStartsOn: 1 });
+    let currentWeek = 1;
 
+    while (true) {
+      const weekStart = currentMonday;
+      const weekEnd = addDays(weekStart, 4);
+
+      if (weekEnd.getUTCMonth() !== targetMonth) {
+        break;
+      }
+
+      if (currentWeek === weekNumber) {
         return {
-          startDate: format(startDate, 'yyyy-MM-dd'),
-          endDate: format(endDate, 'yyyy-MM-dd'),
+          startDate: format(weekStart, 'yyyy-MM-dd'),
+          endDate: format(weekEnd, 'yyyy-MM-dd'),
         };
       }
 
-      current = addWeeks(current, 1);
+      currentWeek++;
+      currentMonday = addWeeks(currentMonday, 1);
     }
 
-    throw new BadRequestException('The specified week does not start in the given month');
+    throw new BadRequestException(`The specified week (${weekNumber}) does not exist for the given month`);
   }
 }

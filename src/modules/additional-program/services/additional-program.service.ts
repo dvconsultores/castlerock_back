@@ -55,6 +55,17 @@ export class AdditionalProgramService {
   async findOne(id: number): Promise<AdditionalProgramEntity | null> {
     return await this.repository.findOne({
       where: { id },
+      relations: ['campus'],
+      select: {
+        id: true,
+        name: true,
+        image: true,
+        days: true,
+        campus: {
+          id: true,
+          name: true,
+        },
+      },
     });
   }
 

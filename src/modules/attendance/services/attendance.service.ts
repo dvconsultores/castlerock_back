@@ -61,10 +61,15 @@ export class AttendanceService {
       where.status = status;
     }
 
-    return await this.repository.find({
+    const attendances = await this.repository.find({
       where,
       relations: ['dailySchedule', 'student'],
     });
+
+    return attendances.map((record) => ({
+      ...record,
+      date: record.dailySchedule?.date,
+    }));
   }
 
   async update(id: number, updateData: Partial<AttendanceEntity>): Promise<void> {

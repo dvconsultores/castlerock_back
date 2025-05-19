@@ -26,16 +26,26 @@ export class AttendanceService {
   }
 
   async findAll(): Promise<Partial<AttendanceEntity>[]> {
-    return await this.repository.find({
+    const records = await this.repository.find({
       relations: ['dailySchedule', 'student'],
     });
+
+    return records.map((record) => ({
+      ...record,
+      date: record.dailySchedule?.date,
+    }));
   }
 
-  async findOne(id: number): Promise<AttendanceEntity | null> {
-    return await this.repository.findOne({
+  async findOne(id: number): Promise<any | null> {
+    const attendance = await this.repository.findOne({
       where: { id },
       relations: ['dailySchedule', 'student'],
     });
+
+    return {
+      ...attendance,
+      date: attendance?.dailySchedule?.date,
+    };
   }
 
   async findByParams(query: FindAttendanceDtoQuery): Promise<AttendanceEntity[]> {

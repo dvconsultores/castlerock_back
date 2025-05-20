@@ -99,7 +99,7 @@ export class DailyScheduleService {
 
       const dailySchedule = await this.dailyScheduleRepository.save(dailyScheduleEntity);
 
-      await this.notificationService.create({
+      this.notificationService.create({
         title: 'New Daily Schedule',
         message: `You have a new daily schedule for ${dto.day} in ${planning.class.name}`,
         userId: teacher.user.id,
@@ -124,8 +124,37 @@ export class DailyScheduleService {
     });
   }
 
-  async update(id: number, updateData: any): Promise<void> {
+  async update(id: number, updateData: UpdateDailyScheduleDto): Promise<DailyScheduleEntity> {
     try {
+      const dailyScheduleFound = await this.dailyScheduleRepository.findOne({
+        where: { id },
+        relations: ['planning'],
+      });
+
+      if (!dailyScheduleFound) {
+        throw new BadRequestException('Daily schedule not found');
+      }
+
+      if (updateData.planningId) {
+        const planning = await this.planningService.findOne(updateData.planningId);
+
+        if (!planning) {
+          throw new NotFoundException('Planning not found');
+        }
+
+        dailyScheduleFound.planning = planning;
+      }
+
+      if (updateData.teacherId) {
+        const teacher = await this.teacherService.findOne(updateData.teacherId);
+
+        if (!teacher) {
+          throw new NotFoundException('Teacher not found');
+        }
+
+        dailyScheduleFound.teacher = teacher;
+      }
+
       if (updateData.studentIds) {
         const students = await this.studentService.findByIds(updateData.studentIds);
 
@@ -133,20 +162,47 @@ export class DailyScheduleService {
           throw new NotFoundException('Students not found');
         }
 
-        updateData.students = students;
+        dailyScheduleFound.students = students;
+      }
+
+      if (updateData.day) {
+        const dayIndex = {
+          Monday: 0,
+          Tuesday: 1,
+          Wednesday: 2,
+          Thursday: 3,
+          Friday: 4,
+          Saturday: 5,
+          Sunday: 6,
+        }[updateData.day];
+
+        const baseDate = new Date(dailyScheduleFound.planning.startDate);
+
+        const date = addDays(baseDate, dayIndex);
+
+        dailyScheduleFound.date = format(date, 'yyyy-MM-dd') as any;
+      }
+
+      if (updateData.notes) {
+        dailyScheduleFound.notes = updateData.notes;
       }
 
       const updateResult = await this.dailyScheduleRepository.update(
         { id },
-        plainToClass(DailyScheduleEntity, {
-          ...updateData,
-          planning: { id: updateData.planningId },
-          teacher: { id: updateData.teacherId },
-        }),
+        plainToClass(DailyScheduleEntity, dailyScheduleFound),
       );
+
       if (updateResult.affected === 0) {
         throw new NotFoundException('Item not found');
       }
+
+      this.notificationService.create({
+        title: 'Daily Schedule Updated',
+        message: `Your daily schedule has been updated for ${updateData.day} in ${dailyScheduleFound.planning.class.name}`,
+        userId: dailyScheduleFound.teacher.user.id,
+      });
+
+      return dailyScheduleFound;
     } catch (error) {
       throw new ExceptionHandler(error);
     }

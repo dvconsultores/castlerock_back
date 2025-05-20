@@ -9,6 +9,7 @@ import { ContactPersonEntity } from '../entities/contact-person.entity';
 import { StorageService } from '../../../shared/storage/storage.service';
 import { Multer } from 'multer';
 import { AdditionalProgramService } from '../../additional-program/services/additional-program.service';
+import { ProgramType } from '../../../shared/enums/program-type.enum';
 
 @Injectable()
 export class StudentService {
@@ -84,6 +85,23 @@ export class StudentService {
       queryBuilder.andWhere('student.daysEnrolled LIKE :pattern', {
         pattern: `%${query.dayEnrolled}%`,
       });
+    }
+
+    if (query.program) {
+      const ageInMonthsExpr = `
+        (EXTRACT(YEAR FROM AGE(NOW(), student.dateOfBirth)) * 12 +
+        EXTRACT(MONTH FROM AGE(NOW(), student.dateOfBirth)))
+      `;
+
+      queryBuilder.addSelect(ageInMonthsExpr, 'student_age_in_months');
+
+      if (query.program === ProgramType.TODDLER) {
+        console.log('TODDLER');
+        queryBuilder.andWhere(`${ageInMonthsExpr} > 24`);
+      } else if (query.program === ProgramType.PRIMARY) {
+        console.log('PRIMARY');
+        queryBuilder.andWhere(`${ageInMonthsExpr} <= 24`);
+      }
     }
 
     const students = await queryBuilder.getMany();

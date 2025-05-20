@@ -14,6 +14,7 @@ import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { WeekDayEnum } from '../../../shared/enums/week-day.enum';
 import { RelationshipType } from '../../../shared/enums/relationship-type.enum';
 import { ToArray } from '../../../helpers/decorators/to-array.decorator';
+import { ProgramType } from '../../../shared/enums/program-type.enum';
 
 export class CreateContactPersonDto {
   @ApiProperty()
@@ -162,4 +163,9 @@ export class FindStudentDtoQuery {
   @IsOptional()
   @IsEnum(WeekDayEnum)
   dayEnrolled?: WeekDayEnum;
+
+  @ApiProperty({ required: false, enum: ProgramType })
+  @IsOptional()
+  @IsEnum(ProgramType)
+  program?: ProgramType;
 }

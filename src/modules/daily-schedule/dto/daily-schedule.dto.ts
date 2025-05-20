@@ -49,10 +49,10 @@ export class UpdateDailyScheduleDto {
   @Type(() => Number)
   planningId?: number;
 
-  @ApiProperty()
-  @IsOptional()
-  @IsEnum(WeekDayEnum)
-  day?: WeekDayEnum;
+  // @ApiProperty()
+  // @IsOptional()
+  // @IsEnum(WeekDayEnum)
+  // day?: WeekDayEnum;
 
   @ApiProperty()
   @IsOptional()

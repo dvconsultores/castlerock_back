@@ -114,7 +114,7 @@ export class DailyScheduleService {
   async findOne(id: number): Promise<DailyScheduleEntity | null> {
     return await this.dailyScheduleRepository.findOne({
       where: { id },
-      relations: ['planning', 'teacher', 'students'],
+      relations: ['planning', 'teacher', 'students', 'teacher.user'],
     });
   }
 
@@ -124,11 +124,25 @@ export class DailyScheduleService {
     });
   }
 
-  async update(id: number, updateData: UpdateDailyScheduleDto): Promise<void> {
+  async update(id: number, updateData: any): Promise<void> {
     try {
+      if (updateData.studentIds) {
+        const students = await this.studentService.findByIds(updateData.studentIds);
+
+        if (!students || students.length === 0) {
+          throw new NotFoundException('Students not found');
+        }
+
+        updateData.students = students;
+      }
+
       const updateResult = await this.dailyScheduleRepository.update(
         { id },
-        plainToClass(DailyScheduleEntity, updateData),
+        plainToClass(DailyScheduleEntity, {
+          ...updateData,
+          planning: { id: updateData.planningId },
+          teacher: { id: updateData.teacherId },
+        }),
       );
       if (updateResult.affected === 0) {
         throw new NotFoundException('Item not found');

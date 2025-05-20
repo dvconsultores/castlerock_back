@@ -187,22 +187,15 @@ export class DailyScheduleService {
         dailyScheduleFound.notes = updateData.notes;
       }
 
-      const updateResult = await this.dailyScheduleRepository.update(
-        { id },
-        plainToClass(DailyScheduleEntity, dailyScheduleFound),
-      );
-
-      if (updateResult.affected === 0) {
-        throw new NotFoundException('Item not found');
-      }
+      const savedSchedule = await this.dailyScheduleRepository.save(dailyScheduleFound);
 
       this.notificationService.create({
         title: 'Daily Schedule Updated',
-        message: `Your daily schedule has been updated for ${updateData.day} in ${dailyScheduleFound.planning.class.name}`,
+        message: `Your daily schedule has been updated for ${updateData.day} in ${savedSchedule.planning.class.name}`,
         userId: dailyScheduleFound.teacher.user.id,
       });
 
-      return dailyScheduleFound;
+      return savedSchedule;
     } catch (error) {
       throw new ExceptionHandler(error);
     }

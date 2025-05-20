@@ -39,7 +39,9 @@ export class PlanningEntity {
   @ManyToOne(() => CampusEntity)
   campus: CampusEntity;
 
-  @ManyToOne(() => ClassEntity)
+  @ManyToOne(() => ClassEntity, {
+    onDelete: 'SET NULL',
+  })
   class: ClassEntity;
 
   @OneToMany(() => DailyScheduleEntity, (dailySchedule) => dailySchedule.planning, {

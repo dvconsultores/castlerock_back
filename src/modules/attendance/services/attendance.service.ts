@@ -54,7 +54,10 @@ export class AttendanceService {
     const queryBuilder = this.repository
       .createQueryBuilder('attendance')
       .leftJoinAndSelect('attendance.dailySchedule', 'dailySchedule')
-      .leftJoinAndSelect('attendance.student', 'student');
+      .leftJoinAndSelect('attendance.student', 'student')
+      .leftJoinAndSelect('dailySchedule.planning', 'planning')
+      .leftJoinAndSelect('planning.class', 'class')
+      .leftJoinAndSelect('planning.campus', 'campus');
 
     if (studentId) {
       queryBuilder.andWhere('student.id = :studentId', { studentId });

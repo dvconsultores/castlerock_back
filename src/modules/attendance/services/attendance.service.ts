@@ -49,22 +49,37 @@ export class AttendanceService {
   }
 
   async findByParams(query: FindAttendanceDtoQuery): Promise<AttendanceEntity[]> {
-    const { studentId, status } = query;
+    const { studentId, status, year, monthFrom, monthTo } = query;
 
-    const where: any = {};
+    const queryBuilder = this.repository
+      .createQueryBuilder('attendance')
+      .leftJoinAndSelect('attendance.dailySchedule', 'dailySchedule')
+      .leftJoinAndSelect('attendance.student', 'student');
 
     if (studentId) {
-      where.student = { id: studentId };
+      queryBuilder.andWhere('student.id = :studentId', { studentId });
     }
 
     if (status) {
-      where.status = status;
+      queryBuilder.andWhere('attendance.status = :status', { status });
     }
 
-    const attendances = await this.repository.find({
-      where,
-      relations: ['dailySchedule', 'student'],
-    });
+    if (year) {
+      queryBuilder.andWhere(`EXTRACT(YEAR FROM dailySchedule.date) = :year`, { year });
+    }
+
+    if (monthFrom && monthTo) {
+      queryBuilder.andWhere(`EXTRACT(MONTH FROM dailySchedule.date) BETWEEN :monthFrom AND :monthTo`, {
+        monthFrom,
+        monthTo,
+      });
+    } else if (monthFrom) {
+      queryBuilder.andWhere(`EXTRACT(MONTH FROM dailySchedule.date) = :monthFrom`, {
+        monthFrom,
+      });
+    }
+
+    const attendances = await queryBuilder.getMany();
 
     return attendances.map((record) => ({
       ...record,

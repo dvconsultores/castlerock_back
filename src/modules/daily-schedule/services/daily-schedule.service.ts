@@ -128,7 +128,7 @@ export class DailyScheduleService {
     try {
       const dailyScheduleFound = await this.dailyScheduleRepository.findOne({
         where: { id },
-        relations: ['planning'],
+        relations: ['planning', 'teacher', 'planning.class'],
       });
 
       if (!dailyScheduleFound) {

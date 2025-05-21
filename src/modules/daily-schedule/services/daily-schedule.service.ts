@@ -120,7 +120,7 @@ export class DailyScheduleService {
 
   async findAll(): Promise<DailyScheduleEntity[]> {
     return await this.dailyScheduleRepository.find({
-      relations: ['planning', 'teacher', 'students'],
+      relations: ['planning', 'teacher', 'students', 'planning.class', 'teacher.user'],
     });
   }
 
@@ -128,7 +128,7 @@ export class DailyScheduleService {
     try {
       const dailyScheduleFound = await this.dailyScheduleRepository.findOne({
         where: { id },
-        relations: ['planning', 'teacher', 'planning.class'],
+        relations: ['planning', 'teacher'],
       });
 
       if (!dailyScheduleFound) {

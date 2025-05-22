@@ -114,7 +114,7 @@ export class DailyScheduleService {
   async findOne(id: number): Promise<DailyScheduleEntity | null> {
     return await this.dailyScheduleRepository.findOne({
       where: { id },
-      relations: ['planning', 'teacher', 'students', 'teacher.user'],
+      relations: ['planning', 'teacher', 'students', 'planning.class', 'teacher.user', 'planning.campus'],
     });
   }
 

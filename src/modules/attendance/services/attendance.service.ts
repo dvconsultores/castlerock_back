@@ -25,6 +25,18 @@ export class AttendanceService {
     return await this.repository.save(newEntity);
   }
 
+  async createMany(dtos: CreateAttendanceDto[]): Promise<AttendanceEntity[]> {
+    const newEntities = dtos.map((dto) =>
+      this.repository.create({
+        ...dto,
+        dailySchedule: { id: dto.dailyScheduleId },
+        student: { id: dto.studentId },
+      }),
+    );
+
+    return await this.repository.save(newEntities);
+  }
+
   async findAll(): Promise<Partial<AttendanceEntity>[]> {
     const records = await this.repository.find({
       relations: ['dailySchedule', 'student'],

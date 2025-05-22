@@ -34,6 +34,14 @@ export class AttendanceController {
     return this.attendanceService.create(body);
   }
 
+  @Post('bulk')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiBody({ type: CreateAttendanceDto, isArray: true })
+  async createMany(@Body() body: CreateAttendanceDto[]) {
+    return this.attendanceService.createMany(body);
+  }
+
   @Get()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()

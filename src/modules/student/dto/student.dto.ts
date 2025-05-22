@@ -1,8 +1,20 @@
-import { IsString, IsDate, IsEnum, IsOptional, IsArray, ValidateNested, IsUUID, IsNumber } from 'class-validator';
-import { Type } from 'class-transformer';
+import {
+  IsString,
+  IsDate,
+  IsEnum,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+  IsUUID,
+  IsNumber,
+  IsNotEmpty,
+} from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { DayOfWeekEnum } from '../../../shared/enums/days-of-week.enum';
+import { WeekDayEnum } from '../../../shared/enums/week-day.enum';
 import { RelationshipType } from '../../../shared/enums/relationship-type.enum';
+import { ToArray } from '../../../helpers/decorators/to-array.decorator';
+import { ProgramType } from '../../../shared/enums/program-type.enum';
 
 export class CreateContactPersonDto {
   @ApiProperty()
@@ -21,9 +33,7 @@ export class CreateContactPersonDto {
   @IsEnum(['PRIMARY', 'SECONDARY', 'EMERGENCY_1', 'EMERGENCY_2'])
   role: 'PRIMARY' | 'SECONDARY' | 'EMERGENCY_1' | 'EMERGENCY_2';
 
-  // @ApiProperty()
-  // @IsUUID()
-  // student: string;
+  image: string;
 }
 
 export class UpdateContactPersonDto extends PartialType(CreateContactPersonDto) {}
@@ -49,11 +59,6 @@ export class CreateStudentDto {
   @ApiProperty()
   @IsOptional()
   @IsString()
-  image?: string;
-
-  @ApiProperty()
-  @IsOptional()
-  @IsString()
   notes?: string;
 
   @ApiPropertyOptional({ type: String, format: 'date' })
@@ -62,52 +67,105 @@ export class CreateStudentDto {
   @Type(() => Date)
   startDateOfClasses?: Date;
 
-  @ApiProperty({ type: [String], enum: DayOfWeekEnum, isArray: true })
+  @ApiProperty({ type: [String], enum: WeekDayEnum, isArray: true })
+  @ToArray()
   @IsArray()
-  @IsEnum(DayOfWeekEnum, { each: true })
-  daysEnrolled: DayOfWeekEnum[];
+  @IsEnum(WeekDayEnum, { each: true })
+  daysEnrolled: WeekDayEnum[];
 
-  @ApiPropertyOptional({ type: [String], enum: DayOfWeekEnum, isArray: true })
+  @ApiPropertyOptional({ type: [String], enum: WeekDayEnum, isArray: true })
   @IsOptional()
+  @ToArray()
   @IsArray()
-  @IsEnum(DayOfWeekEnum, { each: true })
-  beforeSchoolDays?: DayOfWeekEnum[];
+  @IsEnum(WeekDayEnum, { each: true })
+  beforeSchoolDays?: WeekDayEnum[];
 
-  @ApiPropertyOptional({ type: [String], enum: DayOfWeekEnum, isArray: true })
+  @ApiPropertyOptional({ type: [String], enum: WeekDayEnum, isArray: true })
   @IsOptional()
+  @ToArray()
   @IsArray()
-  @IsEnum(DayOfWeekEnum, { each: true })
-  afterSchoolDays?: DayOfWeekEnum[];
+  @IsEnum(WeekDayEnum, { each: true })
+  afterSchoolDays?: WeekDayEnum[];
 
-  @ApiPropertyOptional({
-    type: 'array',
-    items: {
-      type: 'object',
-      properties: {
-        programId: { type: 'number' },
-        sessions: { type: 'number' },
-        duration: { type: 'string' },
-      },
-    },
+  @ApiProperty()
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) return value.map(Number);
+    if (typeof value === 'string') return value.split(',').map(Number);
+    return [];
   })
-  @IsOptional()
   @IsArray()
-  additionalPrograms?: {
-    programId: number;
-    sessions: number;
-    duration: string;
-  }[];
+  @IsNumber({}, { each: true })
+  additionalProgramIds: number[];
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty()
   @IsNumber()
-  campus?: string;
+  @Type(() => Number)
+  campus: number;
 
   @ApiProperty({ type: [CreateContactPersonDto] })
+  @Transform(({ value }) => {
+    try {
+      if (!value) return [];
+
+      if (typeof value === 'string') {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [parsed];
+      }
+
+      if (Array.isArray(value)) {
+        const flattened = value.flat();
+        return flattened.map((item) => (typeof item === 'string' ? JSON.parse(item) : item));
+      }
+
+      return [];
+    } catch (err) {
+      console.error('Failed to transform contacts:', err);
+      return [];
+    }
+  })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateContactPersonDto)
   contacts: CreateContactPersonDto[];
+
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: true,
+  })
+  image: string;
+
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+  })
+  imageContactPrimary: string;
+
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+  })
+  imageContactSecondary: string;
 }
 
 export class UpdateStudentDto extends PartialType(CreateStudentDto) {}
+
+export class FindStudentDtoQuery {
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  campusId?: number;
+
+  @ApiProperty({ required: false, enum: WeekDayEnum })
+  @IsOptional()
+  @IsEnum(WeekDayEnum)
+  dayEnrolled?: WeekDayEnum;
+
+  @ApiProperty({ required: false, enum: ProgramType })
+  @IsOptional()
+  @IsEnum(ProgramType)
+  program?: ProgramType;
+}

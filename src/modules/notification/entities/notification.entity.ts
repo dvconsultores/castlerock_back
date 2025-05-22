@@ -7,8 +7,11 @@ export class NotificationEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => UserEntity, (user) => user.notifications)
+  @ManyToOne(() => UserEntity)
   user: UserEntity;
+
+  @Column({ nullable: true })
+  title: string;
 
   @Column()
   message: string;

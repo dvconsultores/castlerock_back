@@ -82,7 +82,7 @@ export class TeacherService {
   async findOne(id: number): Promise<TeacherEntity | null> {
     return await this.repository.findOne({
       where: { id },
-      relations: ['user'],
+      relations: ['user', 'campus'],
     });
   }
 

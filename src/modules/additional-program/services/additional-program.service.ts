@@ -1,25 +1,40 @@
 import { HttpException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { AdditionalProgramEntity } from '../entities/additional-program.entity';
 import { CreateAdditionalProgramDto, UpdateAdditionalProgramDto } from '../dto/additional-program.dto';
 import { plainToClass } from 'class-transformer';
+import { Multer } from 'multer';
+import { ExceptionHandler } from '../../../helpers/handlers/exception.handler';
+import { StorageService } from '../../../shared/storage/storage.service';
 
 @Injectable()
 export class AdditionalProgramService {
   constructor(
     @InjectRepository(AdditionalProgramEntity)
     private readonly repository: Repository<AdditionalProgramEntity>,
+    private readonly storageService: StorageService,
   ) {}
 
   async save(entity: AdditionalProgramEntity): Promise<AdditionalProgramEntity> {
     return await this.repository.save(entity);
   }
 
-  async create(dto: CreateAdditionalProgramDto): Promise<AdditionalProgramEntity> {
-    const newEntity = plainToClass(AdditionalProgramEntity, dto);
+  async create(dto: CreateAdditionalProgramDto, image?: Multer.File): Promise<AdditionalProgramEntity> {
+    try {
+      let imageUrl: string | null = null;
 
-    return await this.repository.save(newEntity);
+      if (image) {
+        imageUrl = await this.storageService.upload(image);
+        dto.image = imageUrl;
+      }
+
+      const newEntity = plainToClass(AdditionalProgramEntity, dto);
+
+      return await this.repository.save(newEntity);
+    } catch (error) {
+      throw new ExceptionHandler(error);
+    }
   }
 
   async findAll(campusId?: number): Promise<AdditionalProgramEntity[]> {
@@ -40,6 +55,17 @@ export class AdditionalProgramService {
   async findOne(id: number): Promise<AdditionalProgramEntity | null> {
     return await this.repository.findOne({
       where: { id },
+      relations: ['campus'],
+      select: {
+        id: true,
+        name: true,
+        image: true,
+        days: true,
+        campus: {
+          id: true,
+          name: true,
+        },
+      },
     });
   }
 
@@ -50,10 +76,21 @@ export class AdditionalProgramService {
     });
   }
 
-  async update(id: number, updateData: UpdateAdditionalProgramDto): Promise<void> {
-    const updateResult = await this.repository.update({ id }, plainToClass(AdditionalProgramEntity, updateData));
-    if (updateResult.affected === 0) {
-      throw new NotFoundException('Item not found');
+  async update(id: number, updateData: UpdateAdditionalProgramDto, image?: Multer.File): Promise<void> {
+    try {
+      let imageUrl: string | undefined;
+
+      if (image) {
+        imageUrl = await this.storageService.upload(image);
+        updateData.image = imageUrl;
+      }
+
+      const updateResult = await this.repository.update({ id }, plainToClass(AdditionalProgramEntity, updateData));
+      if (updateResult.affected === 0) {
+        throw new NotFoundException('Item not found');
+      }
+    } catch (error) {
+      throw new ExceptionHandler(error);
     }
   }
 
@@ -62,5 +99,9 @@ export class AdditionalProgramService {
     if (deleteResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }
+  }
+
+  async findByIds(ids: number[]): Promise<AdditionalProgramEntity[]> {
+    return await this.repository.findBy({ id: In(ids) });
   }
 }

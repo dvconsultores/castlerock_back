@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import { CampusEntity } from '../../campus/entities/campus.entity';
 import { IsArray, IsEnum } from 'class-validator';
-import { DayOfWeekEnum } from '../../../shared/enums/days-of-week.enum';
+import { WeekDayEnum } from '../../../shared/enums/week-day.enum';
 
 @Entity({ name: 'additional_programs' })
 export class AdditionalProgramEntity {
@@ -25,8 +25,11 @@ export class AdditionalProgramEntity {
 
   @Column('simple-array', { name: 'days' })
   @IsArray()
-  @IsEnum(DayOfWeekEnum, { each: true })
-  days: DayOfWeekEnum[];
+  @IsEnum(WeekDayEnum, { each: true })
+  days: WeekDayEnum[];
+
+  @Column({ nullable: true })
+  image: string;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

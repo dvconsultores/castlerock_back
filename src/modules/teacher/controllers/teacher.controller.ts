@@ -38,26 +38,26 @@ export class TeacherController {
     return this.teacherService.findAll();
   }
 
-  @Get(':id')
+  @Get(':teacherId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findOne(@Param('id') id: number) {
+  async findOne(@Param('teacherId') id: number) {
     return this.teacherService.findOne(id);
   }
 
-  @Patch(':id')
+  @Patch(':teacherId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async update(@Param('id') id: number, @Body() body: UpdateTeacherDto) {
+  async update(@Param('teacherId') id: number, @Body() body: UpdateTeacherDto) {
     return this.teacherService.update(id, body);
   }
 
-  @Delete(':id')
+  @Delete(':teacherId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async remove(@Param('id') id: number) {
+  async remove(@Param('teacherId') id: number) {
     return this.teacherService.remove(id);
   }
 }

@@ -11,16 +11,18 @@ import {
   Put,
   UseGuards,
   Req,
+  ValidationPipe,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { CreatePlanningDto, UpdatePlanningDto } from '../dto/planning.dto';
+import { CreatePlanningDto, FindPlanningDtoQuery, UpdatePlanningDto } from '../dto/planning.dto';
 import { PlanningService } from '../services/planning.service';
 import { AuthGuard } from '../../../helpers/guards/auth.guard';
 import { UserRole } from '../../../shared/enums/user-role.enum';
 import { Roles } from '../../../helpers/decorators/roles.decorator';
+import { PlanningEntity } from '../entities/planning.entity';
 
-@ApiTags('Plannings')
-@Controller('plannings')
+@ApiTags('Planning')
+@Controller('planning')
 export class PlanningController {
   constructor(private readonly planningService: PlanningService) {}
 
@@ -29,9 +31,32 @@ export class PlanningController {
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
   async create(@Body() body: CreatePlanningDto, @Req() req: Request) {
-    const user = req['user'];
+    if (body.week) {
+      return this.planningService.create(body);
+    } else {
+      const promises: any[] = [];
 
-    return this.planningService.create(body, user.id);
+      for (let i = 1; i <= 6; i++) {
+        const newBody = { ...body, week: i };
+        promises.push(this.planningService.create(newBody));
+      }
+
+      const results = await Promise.allSettled(promises);
+
+      const successfulPlannings: PlanningEntity[] = [];
+      const failedWeeks: number[] = [];
+
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          successfulPlannings.push(result.value);
+        } else {
+          failedWeeks.push(index + 1);
+          console.error(`Error in week ${index + 1}:`, result.reason);
+        }
+      });
+
+      return successfulPlannings;
+    }
   }
 
   @Get()
@@ -41,26 +66,33 @@ export class PlanningController {
     return this.planningService.findAll();
   }
 
-  @Get(':id')
+  @Get('search')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findOne(@Param('id') id: number) {
+  async findByParams(@Query(new ValidationPipe({ transform: true })) query: FindPlanningDtoQuery) {
+    return this.planningService.findByParams(query);
+  }
+
+  @Get(':planningId')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  async findOne(@Param('planningId') id: number) {
     return this.planningService.findOne(id);
   }
 
-  @Patch(':id')
+  @Patch(':planningId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async update(@Param('id') id: number, @Body() body: UpdatePlanningDto) {
+  async update(@Param('planningId') id: number, @Body() body: UpdatePlanningDto) {
     return this.planningService.update(id, body);
   }
 
-  @Delete(':id')
+  @Delete(':planningId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async remove(@Param('id') id: number) {
+  async remove(@Param('planningId') id: number) {
     return this.planningService.remove(id);
   }
 }

@@ -14,17 +14,34 @@ import {
 } from 'class-validator';
 import { UserEntity } from '../../user/entities/user.entity';
 import { CampusEntity } from '../../campus/entities/campus.entity';
+import { Type } from 'class-transformer';
+import { ClassEntity } from '../../class/entities/class.entity';
 
 export class CreatePlanningDto {
   @ApiProperty()
   @IsNotEmpty()
-  @IsString()
-  date: string;
+  @IsNumber()
+  year: number;
 
   @ApiProperty()
   @IsNotEmpty()
   @IsNumber()
-  campusId: number;
+  month: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  week?: number;
+
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsNumber()
+  campus: number;
+
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsNumber()
+  class: number;
 }
 
 export class UpdatePlanningDto {
@@ -39,6 +56,11 @@ export class PlanningDto {
   @IsNotEmpty()
   @IsNumber()
   year: number;
+
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsNumber()
+  month: number;
 
   @ApiProperty()
   @IsNotEmpty()
@@ -58,10 +80,38 @@ export class PlanningDto {
   @ApiProperty()
   @IsNotEmpty()
   @IsObject()
-  admin: UserEntity;
+  campus: CampusEntity;
 
   @ApiProperty()
   @IsNotEmpty()
   @IsObject()
-  campus: CampusEntity;
+  class: ClassEntity;
+}
+
+export class FindPlanningDtoQuery {
+  @ApiProperty()
+  @Type(() => Number)
+  @IsNumber()
+  campus: number;
+
+  @ApiProperty()
+  @Type(() => Number)
+  @IsNumber()
+  class: number;
+
+  @ApiProperty()
+  @Type(() => Number)
+  @IsNumber()
+  year: number;
+
+  @ApiProperty()
+  @Type(() => Number)
+  @IsNumber()
+  month: number;
+
+  @ApiProperty({ required: false })
+  @Type(() => Number)
+  @IsOptional()
+  @IsNumber()
+  week?: number;
 }

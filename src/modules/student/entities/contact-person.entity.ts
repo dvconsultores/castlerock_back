@@ -7,7 +7,7 @@ export class ContactPersonEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ name: 'full_name' })
   fullName: string;
 
   @Column()
@@ -19,11 +19,17 @@ export class ContactPersonEntity {
   })
   relation: RelationshipType;
 
-  @Column()
+  @Column({
+    type: 'enum',
+    enum: ['PRIMARY', 'SECONDARY', 'EMERGENCY_1', 'EMERGENCY_2'],
+  })
   role: 'PRIMARY' | 'SECONDARY' | 'EMERGENCY_1' | 'EMERGENCY_2';
 
   @ManyToOne(() => StudentEntity, (student) => student.contacts, {
     onDelete: 'CASCADE',
   })
   student: StudentEntity;
+
+  @Column({ nullable: true })
+  image: string;
 }

@@ -27,20 +27,17 @@ export class EnvironmentVariables {
   @IsString()
   JWT_SECRET!: string;
 
-  @IsString()
-  LOGGER_CLIENT_EMAIL!: string;
+  // @IsString()
+  // LOGGER_CLIENT_EMAIL!: string;
 
-  @IsString()
-  LOGGER_PROJECT_ID!: string;
+  // @IsString()
+  // LOGGER_PROJECT_ID!: string;
 
-  @IsString()
-  LOGGER_PRIVATE_KEY!: string;
+  // @IsString()
+  // LOGGER_PRIVATE_KEY!: string;
 
   @IsString()
   MAIL_HOST!: string;
-
-  // @IsInt()
-  // MAIL_PORT!: number;
 
   @IsString()
   MAIL_USER!: string;
@@ -50,4 +47,19 @@ export class EnvironmentVariables {
 
   @IsString()
   MAIL_FROM!: string;
+
+  @IsString()
+  DO_SPACES_KEY!: string;
+
+  @IsString()
+  DO_SPACES_SECRET!: string;
+
+  @IsString()
+  DO_SPACES_REGION!: string;
+
+  @IsString()
+  DO_SPACES_BUCKET!: string;
+
+  @IsString()
+  DO_SPACES_ENDPOINT!: string;
 }

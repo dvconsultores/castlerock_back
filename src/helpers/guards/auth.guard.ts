@@ -24,6 +24,10 @@ export class AuthGuard implements CanActivate {
 
     const token = authHeader.split(' ')[1];
 
+    if (token === this.configService.get('API_KEY')) {
+      return true;
+    }
+
     try {
       const payload = await this.jwtService.verify(token, {
         secret: this.configService.get('JWT_SECRET', { infer: true }),

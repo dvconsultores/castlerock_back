@@ -37,7 +37,7 @@ export class UserController {
     description: 'Create a user with image upload',
     type: CreateUserDto,
   })
-  async create(@Body() body: CreateUserDto, @UploadedFile() image: Multer.File) {
+  async create(@Body() body: CreateUserDto, @UploadedFile() image?: Multer.File) {
     return this.userService.create(body, image);
   }
 

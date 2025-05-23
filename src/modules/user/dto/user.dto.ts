@@ -47,9 +47,10 @@ export class CreateUserDto {
   @ApiProperty({
     type: 'string',
     format: 'binary',
-    required: true,
+    required: false,
   })
-  image: string;
+  @IsOptional()
+  image?: string;
 
   // @ApiProperty()
   // @IsOptional()

@@ -6,6 +6,9 @@ export class EnvironmentVariables {
   @IsEnum(EnvironmentEnum)
   NODE_ENV: EnvironmentEnum;
 
+  @IsString()
+  API_KEY!: string;
+
   @IsInt()
   PORT!: number;
 

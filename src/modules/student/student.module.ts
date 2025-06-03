@@ -5,9 +5,10 @@ import { StudentService } from './services/student.service';
 import { StudentController } from './controllers/student.controller';
 import { ContactPersonEntity } from './entities/contact-person.entity';
 import { AdditionalProgramModule } from '../additional-program/additional-program.module';
+import { ClassModule } from '../class/class.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([StudentEntity, ContactPersonEntity]), AdditionalProgramModule],
+  imports: [TypeOrmModule.forFeature([StudentEntity, ContactPersonEntity]), AdditionalProgramModule, ClassModule],
   exports: [StudentService],
   controllers: [StudentController],
   providers: [StudentService],

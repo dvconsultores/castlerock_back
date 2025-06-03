@@ -11,6 +11,7 @@ import {
   MinLength,
   IsNumber,
   ValidateNested,
+  IsArray,
 } from 'class-validator';
 import { CreateUserDto, UpdateUserDto } from '../../user/dto/user.dto';
 import { Type } from 'class-transformer';
@@ -40,6 +41,12 @@ export class CreateTeacherDto {
   @IsNumber()
   @IsNotEmpty()
   campus: number;
+
+  @ApiProperty()
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @Type(() => Number)
+  classIds: number[];
 }
 
 export class TeacherDto {
@@ -77,6 +84,13 @@ export class UpdateTeacherDto {
   @IsOptional()
   @IsNumber()
   campus?: number;
+
+  @ApiProperty()
+  @IsOptional()
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @Type(() => Number)
+  classIds?: number[];
 }
 
 export class AssignTeacherDto {

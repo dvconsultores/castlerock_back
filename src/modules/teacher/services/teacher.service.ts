@@ -1,19 +1,20 @@
 import { HttpException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { TeacherEntity } from '../entities/teacher.entity';
 import { CreateTeacherDto, TeacherDto, UpdateTeacherDto } from '../dto/teacher.dto';
-import { plainToClass } from 'class-transformer';
+import { instanceToPlain, plainToClass } from 'class-transformer';
 import { UserService } from '../../user/services/user.service';
 import { CreateUserDto } from '../../user/dto/user.dto';
 import { UserRole } from '../../../shared/enums/user-role.enum';
+import { ClassService } from '../../class/services/class.service';
 
 @Injectable()
 export class TeacherService {
   constructor(
     @InjectRepository(TeacherEntity)
     private readonly repository: Repository<TeacherEntity>,
-    private readonly userService: UserService,
+    private readonly classService: ClassService,
   ) {}
 
   async save(entity: TeacherEntity): Promise<TeacherEntity> {
@@ -37,7 +38,9 @@ export class TeacherService {
     //   campus: dto.campus,
     // };
 
-    const newEntity = plainToClass(TeacherEntity, dto);
+    const classes = await this.classService.findByIds(dto.classIds);
+
+    const newEntity = plainToClass(TeacherEntity, { ...dto, classes });
 
     return await this.repository.save(newEntity);
   }
@@ -47,6 +50,7 @@ export class TeacherService {
       .createQueryBuilder('teacher')
       .leftJoinAndSelect('teacher.user', 'user')
       .leftJoinAndSelect('teacher.campus', 'campus')
+      .leftJoinAndSelect('teacher.classes', 'class')
       .select([
         'teacher',
         'user.id',
@@ -58,6 +62,8 @@ export class TeacherService {
         'user.role',
         'campus.id',
         'campus.name',
+        'class.id',
+        'class.name',
       ]);
 
     if (campusId) {
@@ -130,5 +136,9 @@ export class TeacherService {
     if (deleteResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }
+  }
+
+  async findByIds(ids: number[]): Promise<TeacherEntity[]> {
+    return await this.repository.findBy({ id: In(ids) });
   }
 }

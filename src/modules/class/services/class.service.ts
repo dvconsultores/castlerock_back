@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { ClassEntity } from '../entities/class.entity';
 import { ClassDto, CreateClassDto, UpdateClassDto } from '../dto/class.dto';
 import { plainToClass } from 'class-transformer';
@@ -72,5 +72,9 @@ export class ClassService {
     if (deleteResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }
+  }
+
+  async findByIds(ids: number[]): Promise<ClassEntity[]> {
+    return await this.repository.findBy({ id: In(ids) });
   }
 }

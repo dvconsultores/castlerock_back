@@ -18,6 +18,7 @@ import { WeekDayEnum } from '../../../shared/enums/week-day.enum';
 import { ProgramType } from '../../../shared/enums/program-type.enum';
 import { Expose } from 'class-transformer';
 import { AdditionalProgramEntity } from '../../additional-program/entities/additional-program.entity';
+import { ClassEntity } from '../../class/entities/class.entity';
 
 @Entity('students')
 export class StudentEntity {
@@ -73,6 +74,12 @@ export class StudentEntity {
 
   @ManyToOne(() => CampusEntity, (campus) => campus.students, { nullable: true, onDelete: 'SET NULL' })
   campus: CampusEntity;
+
+  @ManyToMany(() => ClassEntity, (classEntity) => classEntity.students, {
+    cascade: true,
+  })
+  @JoinTable()
+  classes: ClassEntity[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

@@ -7,9 +7,12 @@ import {
   CreateDateColumn,
   OneToOne,
   JoinColumn,
+  JoinTable,
+  ManyToMany,
 } from 'typeorm';
 import { UserEntity } from '../../user/entities/user.entity';
 import { CampusEntity } from '../../campus/entities/campus.entity';
+import { ClassEntity } from '../../class/entities/class.entity';
 
 @Entity({ name: 'teachers' })
 export class TeacherEntity {
@@ -22,4 +25,10 @@ export class TeacherEntity {
 
   @ManyToOne(() => CampusEntity, (campus) => campus.teachers, { onDelete: 'SET NULL' })
   campus: CampusEntity;
+
+  @ManyToMany(() => ClassEntity, (classEntity) => classEntity.teachers, {
+    cascade: true,
+  })
+  @JoinTable()
+  classes: ClassEntity[];
 }

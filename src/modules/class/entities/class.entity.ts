@@ -7,9 +7,12 @@ import {
   CreateDateColumn,
   OneToOne,
   JoinColumn,
+  ManyToMany,
 } from 'typeorm';
 import { CampusEntity } from '../../campus/entities/campus.entity';
 import { ProgramType } from '../../../shared/enums/program-type.enum';
+import { StudentEntity } from '../../student/entities/student.entity';
+import { TeacherEntity } from '../../teacher/entities/teacher.entity';
 
 @Entity({ name: 'classes' })
 export class ClassEntity {
@@ -33,4 +36,10 @@ export class ClassEntity {
 
   @Column({ nullable: true })
   image: string;
+
+  @ManyToMany(() => TeacherEntity, (teacher) => teacher.classes)
+  teachers: TeacherEntity[];
+
+  @ManyToMany(() => StudentEntity, (student) => student.classes)
+  students: StudentEntity[];
 }

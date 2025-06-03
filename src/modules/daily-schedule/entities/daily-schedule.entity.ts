@@ -22,8 +22,9 @@ export class DailyScheduleEntity {
   })
   planning: PlanningEntity;
 
-  @ManyToOne(() => TeacherEntity, { nullable: false })
-  teacher: TeacherEntity;
+  @ManyToMany(() => TeacherEntity)
+  @JoinTable()
+  teachers: TeacherEntity[];
 
   @ManyToMany(() => StudentEntity)
   @JoinTable()

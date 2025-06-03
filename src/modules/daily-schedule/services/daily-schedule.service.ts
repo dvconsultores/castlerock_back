@@ -54,10 +54,10 @@ export class DailyScheduleService {
         throw new NotFoundException('Planning not found');
       }
 
-      const teacher = await this.teacherService.findOne(dto.teacherId);
+      const teachers = await this.teacherService.findByIds(dto.teacherIds);
 
-      if (!teacher) {
-        throw new NotFoundException('Teacher not found');
+      if (!teachers || teachers.length === 0) {
+        throw new NotFoundException('Teachers not found');
       }
 
       const students = await this.studentService.findByIds(dto.studentIds);
@@ -90,7 +90,7 @@ export class DailyScheduleService {
 
       const dailyScheduleEntity = plainToClass(DailyScheduleEntity, {
         planning,
-        teacher,
+        teachers,
         students,
         day: dto.day,
         date: format(date, 'yyyy-MM-dd'),
@@ -99,11 +99,13 @@ export class DailyScheduleService {
 
       const dailySchedule = await this.dailyScheduleRepository.save(dailyScheduleEntity);
 
-      this.notificationService.create({
-        title: 'New Daily Schedule',
-        message: `You have a new daily schedule for ${dto.day} in ${planning.class.name}`,
-        userId: teacher.user.id,
-      });
+      for (const teacher of teachers) {
+        this.notificationService.create({
+          title: 'New Daily Schedule',
+          message: `You have a new daily schedule for ${dto.day} in ${planning.class.name}`,
+          userId: teacher.user.id,
+        });
+      }
 
       return dailySchedule;
     } catch (error) {
@@ -114,13 +116,13 @@ export class DailyScheduleService {
   async findOne(id: number): Promise<DailyScheduleEntity | null> {
     return await this.dailyScheduleRepository.findOne({
       where: { id },
-      relations: ['planning', 'teacher', 'students', 'planning.class', 'teacher.user', 'planning.campus'],
+      relations: ['planning', 'teachers', 'students', 'planning.class', 'teachers.user', 'planning.campus'],
     });
   }
 
   async findAll(): Promise<DailyScheduleEntity[]> {
     return await this.dailyScheduleRepository.find({
-      relations: ['planning', 'teacher', 'students', 'planning.class', 'teacher.user', 'planning.campus'],
+      relations: ['planning', 'teachers', 'students', 'planning.class', 'teachers.user', 'planning.campus'],
     });
   }
 
@@ -128,7 +130,7 @@ export class DailyScheduleService {
     try {
       const dailyScheduleFound = await this.dailyScheduleRepository.findOne({
         where: { id },
-        relations: ['planning', 'teacher'],
+        relations: ['planning', 'teachers'],
       });
 
       if (!dailyScheduleFound) {
@@ -145,14 +147,14 @@ export class DailyScheduleService {
         dailyScheduleFound.planning = planning;
       }
 
-      if (updateData.teacherId) {
-        const teacher = await this.teacherService.findOne(updateData.teacherId);
+      if (updateData.teacherIds) {
+        const teachers = await this.teacherService.findByIds(updateData.teacherIds);
 
-        if (!teacher) {
-          throw new NotFoundException('Teacher not found');
+        if (!teachers || teachers.length === 0) {
+          throw new NotFoundException('Teachers not found');
         }
 
-        dailyScheduleFound.teacher = teacher;
+        dailyScheduleFound.teachers = teachers;
       }
 
       if (updateData.studentIds) {
@@ -189,11 +191,13 @@ export class DailyScheduleService {
 
       const savedSchedule = await this.dailyScheduleRepository.save(dailyScheduleFound);
 
-      this.notificationService.create({
-        title: 'Daily Schedule Updated',
-        message: `Your daily schedule has been updated for ${updateData.day} in ${savedSchedule.planning.class.name}`,
-        userId: dailyScheduleFound.teacher.user.id,
-      });
+      for (const teacher of savedSchedule.teachers) {
+        this.notificationService.create({
+          title: 'Daily Schedule Updated',
+          message: `Your daily schedule has been updated for ${updateData.day} in ${savedSchedule.planning.class.name}`,
+          userId: teacher.user.id,
+        });
+      }
 
       return savedSchedule;
     } catch (error) {

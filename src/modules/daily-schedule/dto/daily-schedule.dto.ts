@@ -26,9 +26,10 @@ export class CreateDailyScheduleDto {
   day: WeekDayEnum;
 
   @ApiProperty()
-  @IsNumber()
+  @IsArray()
+  @IsNumber({}, { each: true })
   @Type(() => Number)
-  teacherId: number;
+  teacherIds: number[];
 
   @ApiProperty()
   @IsArray()
@@ -56,9 +57,10 @@ export class UpdateDailyScheduleDto {
 
   @ApiProperty()
   @IsOptional()
-  @IsNumber()
+  @IsArray()
+  @IsNumber({}, { each: true })
   @Type(() => Number)
-  teacherId?: number;
+  teacherIds?: number[];
 
   @ApiProperty()
   @IsOptional()

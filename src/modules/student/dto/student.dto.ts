@@ -148,6 +148,12 @@ export class CreateStudentDto {
     required: false,
   })
   imageContactSecondary: string;
+
+  @ApiProperty()
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @Type(() => Number)
+  classIds: number[];
 }
 
 export class UpdateStudentDto extends PartialType(CreateStudentDto) {}

@@ -87,7 +87,14 @@ export class PlanningService {
 
   async findAll(): Promise<PlanningEntity[]> {
     return await this.repository.find({
-      relations: ['campus', 'class'],
+      relations: [
+        'campus',
+        'class',
+        'dailySchedules',
+        'dailySchedules.teachers',
+        'dailySchedules.students',
+        'dailySchedules.teachers.user',
+      ],
     });
   }
 
@@ -102,17 +109,19 @@ export class PlanningService {
       ...(week !== undefined && { week }),
     };
 
-    return await this.repository.find({
+    const planning = await this.repository.find({
       where: filters,
       relations: [
         'campus',
         'class',
         'dailySchedules',
-        'dailySchedules.teacher',
+        'dailySchedules.teachers',
         'dailySchedules.students',
-        'dailySchedules.teacher.user',
+        'dailySchedules.teachers.user',
       ],
     });
+
+    return planning;
   }
 
   async findOneByParams(query: FindPlanningDtoQuery): Promise<PlanningEntity | null> {
@@ -128,7 +137,7 @@ export class PlanningService {
 
     return await this.repository.findOne({
       where: filters,
-      relations: ['campus', 'class', 'dailySchedules', 'dailySchedules.teacher', 'dailySchedules.students'],
+      relations: ['campus', 'class', 'dailySchedules', 'dailySchedules.teachers', 'dailySchedules.students'],
     });
   }
 

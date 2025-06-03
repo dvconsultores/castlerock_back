@@ -10,6 +10,7 @@ import { StorageService } from '../../../shared/storage/storage.service';
 import { Multer } from 'multer';
 import { AdditionalProgramService } from '../../additional-program/services/additional-program.service';
 import { ProgramType } from '../../../shared/enums/program-type.enum';
+import { ClassService } from '../../class/services/class.service';
 
 @Injectable()
 export class StudentService {
@@ -20,6 +21,7 @@ export class StudentService {
     private readonly contactPersonRepository: Repository<ContactPersonEntity>,
     private readonly storageService: StorageService,
     private readonly additionalProgramService: AdditionalProgramService,
+    private readonly classService: ClassService,
   ) {}
 
   async save(entity: StudentEntity): Promise<StudentEntity> {
@@ -56,8 +58,11 @@ export class StudentService {
 
       const additionalPrograms = await this.additionalProgramService.findByIds(dto.additionalProgramIds);
 
+      const classes = await this.classService.findByIds(dto.classIds);
+
       const newEntity = plainToClass(StudentEntity, {
         ...dto,
+        classes,
         additionalPrograms,
       });
 
@@ -75,7 +80,8 @@ export class StudentService {
       .leftJoinAndSelect('student.campus', 'campus')
       .leftJoinAndSelect('student.contacts', 'contacts')
       .leftJoinAndSelect('student.additionalPrograms', 'additionalPrograms')
-      .select(['student', 'campus.id', 'campus.name', 'contacts', 'additionalPrograms']);
+      .leftJoinAndSelect('student.classes', 'classes')
+      .select(['student', 'campus.id', 'campus.name', 'contacts', 'additionalPrograms', 'classes']);
 
     if (query.campusId) {
       queryBuilder.where('campus.id = :campusId', { campusId: query.campusId });
@@ -114,7 +120,8 @@ export class StudentService {
       .leftJoinAndSelect('student.campus', 'campus')
       .leftJoinAndSelect('student.contacts', 'contacts')
       .leftJoinAndSelect('student.additionalPrograms', 'additionalPrograms')
-      .select(['student', 'campus.id', 'campus.name', 'contacts', 'additionalPrograms'])
+      .leftJoinAndSelect('student.classes', 'classes')
+      .select(['student', 'campus.id', 'campus.name', 'contacts', 'additionalPrograms', 'classes'])
       .where('student.id = :id', { id })
       .getOne();
 
@@ -192,6 +199,16 @@ export class StudentService {
             await this.contactPersonRepository.save(newContact);
           }
         }
+      }
+
+      if (updateData.additionalProgramIds) {
+        const additionalPrograms = await this.additionalProgramService.findByIds(updateData.additionalProgramIds);
+        student.additionalPrograms = additionalPrograms;
+      }
+
+      if (updateData.classIds) {
+        const classes = await this.classService.findByIds(updateData.classIds);
+        student.classes = classes;
       }
 
       await this.repository.save(student);

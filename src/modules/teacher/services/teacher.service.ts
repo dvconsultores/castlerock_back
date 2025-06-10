@@ -139,6 +139,6 @@ export class TeacherService {
   }
 
   async findByIds(ids: number[]): Promise<TeacherEntity[]> {
-    return await this.repository.findBy({ id: In(ids) });
+    return await this.repository.find({ where: { id: In(ids) }, relations: ['user', 'campus'] });
   }
 }

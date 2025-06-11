@@ -150,9 +150,13 @@ export class CreateStudentDto {
   imageContactSecondary: string;
 
   @ApiProperty()
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) return value.map(Number);
+    if (typeof value === 'string') return value.split(',').map(Number);
+    return [];
+  })
   @IsArray()
   @IsNumber({}, { each: true })
-  @Type(() => Number)
   classIds: number[];
 }
 

@@ -135,10 +135,8 @@ export class StudentService {
       queryBuilder.addSelect(ageInMonthsExpr, 'student_age_in_months');
 
       if (query.program === ProgramType.TODDLER) {
-        console.log('TODDLER');
         queryBuilder.andWhere(`${ageInMonthsExpr} > 24`);
       } else if (query.program === ProgramType.PRIMARY) {
-        console.log('PRIMARY');
         queryBuilder.andWhere(`${ageInMonthsExpr} <= 24`);
       }
     }
@@ -178,7 +176,7 @@ export class StudentService {
     imageContactSecondary?: Multer.File,
   ): Promise<void> {
     try {
-      const student = await this.repository.findOne({ where: { id } });
+      const student = await this.repository.findOne({ where: { id }, relations: ['classes'] });
 
       if (!student) {
         throw new NotFoundException('Student not found');
@@ -239,8 +237,11 @@ export class StudentService {
         student.additionalPrograms = additionalPrograms;
       }
 
-      if (updateData.classIds) {
-        const classes = await this.classService.findByIds(updateData.classIds);
+      if (updateData.classIds || updateData.daysEnrolled) {
+        const classes = await this.classService.findByIds(updateData.classIds || student.classes.map((c) => c.id));
+
+        const removedClasses = student.classes.filter((oldC) => !classes.some((newC) => newC.id === oldC.id));
+
         student.classes = classes;
 
         const studentId = student.id;
@@ -250,16 +251,36 @@ export class StudentService {
 
         const futureSchedules = await this.dailyScheduleRepository.find({
           where: {
-            planning: { class: { id: In(updateData.classIds) } },
+            planning: { class: { id: In(updateData.classIds || classes.map((c) => c.id)) } },
             date: MoreThanOrEqual(today),
-            day: In(student.daysEnrolled),
           },
           relations: ['students'],
         });
 
         for (const sched of futureSchedules) {
           if (!sched.students.find((s) => s.id === studentId)) {
-            sched.students.push(student);
+            if (student.daysEnrolled.includes(sched.day)) {
+              sched.students.push(student);
+              await this.dailyScheduleRepository.save(sched);
+            }
+          } else {
+            if (!student.daysEnrolled.includes(sched.day)) {
+              sched.students = sched.students.filter((s) => s.id !== studentId);
+              await this.dailyScheduleRepository.save(sched);
+            }
+          }
+        }
+
+        for (const removedClass of removedClasses) {
+          const schedulesToRemove = await this.dailyScheduleRepository.find({
+            where: {
+              planning: { class: { id: removedClass.id } },
+              students: { id: studentId },
+            },
+          });
+
+          for (const sched of schedulesToRemove) {
+            sched.students = sched.students.filter((s) => s.id !== studentId);
             await this.dailyScheduleRepository.save(sched);
           }
         }

@@ -132,6 +132,9 @@ export class TeacherService {
       }
 
       const classes = await this.classService.findByIds(updateData.classIds);
+
+      const removedClasses = teacher.classes.filter((oldC) => !classes.some((newC) => newC.id === oldC.id));
+
       teacher.classes = classes;
 
       await this.repository.save(teacher);
@@ -152,6 +155,20 @@ export class TeacherService {
       for (const sched of futureSchedules) {
         if (!sched.teachers.find((s) => s.id === teacherId)) {
           sched.teachers.push(teacher);
+          await this.dailyScheduleRepository.save(sched);
+        }
+      }
+
+      for (const removedClass of removedClasses) {
+        const schedulesToRemove = await this.dailyScheduleRepository.find({
+          where: {
+            planning: { class: { id: removedClass.id } },
+            teachers: { id: teacherId },
+          },
+        });
+
+        for (const sched of schedulesToRemove) {
+          sched.teachers = sched.teachers.filter((s) => s.id !== teacherId);
           await this.dailyScheduleRepository.save(sched);
         }
       }

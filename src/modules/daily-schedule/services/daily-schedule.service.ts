@@ -59,15 +59,7 @@ export class DailyScheduleService {
 
       const teachers = await this.teacherService.findByIds(dto.teacherIds);
 
-      if (!teachers || teachers.length === 0) {
-        throw new NotFoundException('Teachers not found');
-      }
-
       const students = await this.studentService.findByIds(dto.studentIds);
-
-      if (!students || students.length === 0) {
-        throw new NotFoundException('Students not found');
-      }
 
       await students.forEach((student) => {
         if (student.program !== planning.class.program) {

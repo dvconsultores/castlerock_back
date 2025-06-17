@@ -46,11 +46,11 @@ export class TeacherService {
         planning: { class: { id: In(dto.classIds) } },
         date: MoreThanOrEqual(today),
       },
-      relations: ['students'],
+      relations: ['teachers'],
     });
 
     for (const sched of futureSchedules) {
-      if (!sched.students.find((s) => s.id === teacherId)) {
+      if (!sched.teachers.find((s) => s.id === teacherId)) {
         sched.teachers.push(teacher);
         this.dailyScheduleRepository.save(sched);
       }
@@ -121,7 +121,7 @@ export class TeacherService {
   }
 
   async update(id: number, updateData: UpdateTeacherDto): Promise<void> {
-    if (updateData.classIds) {
+    if (updateData.classIds !== undefined && updateData.classIds.length >= 0) {
       const teacher = await this.repository.findOne({
         where: { id },
         relations: ['classes', 'dailySchedules'],
@@ -131,13 +131,9 @@ export class TeacherService {
         throw new NotFoundException('Teacher not found');
       }
 
-      const classes = await this.classService.findByIds(updateData.classIds);
+      const classes = updateData.classIds ? await this.classService.findByIds(updateData.classIds) : [];
 
       const removedClasses = teacher.classes.filter((oldC) => !classes.some((newC) => newC.id === oldC.id));
-
-      teacher.classes = classes;
-
-      await this.repository.save(teacher);
 
       const teacherId = teacher.id;
 
@@ -146,10 +142,10 @@ export class TeacherService {
 
       const futureSchedules = await this.dailyScheduleRepository.find({
         where: {
-          planning: { class: { id: In(updateData.classIds) } },
+          planning: { class: { id: In(classes.map((c) => c.id)) } },
           date: MoreThanOrEqual(today),
         },
-        relations: ['students'],
+        relations: ['teachers'],
       });
 
       for (const sched of futureSchedules) {
@@ -160,18 +156,22 @@ export class TeacherService {
       }
 
       for (const removedClass of removedClasses) {
-        const schedulesToRemove = await this.dailyScheduleRepository.find({
-          where: {
-            planning: { class: { id: removedClass.id } },
-            teachers: { id: teacherId },
-          },
-        });
+        const schedulesToRemove = await this.dailyScheduleRepository
+          .createQueryBuilder('ds')
+          .innerJoin('ds.planning', 'pl')
+          .andWhere('pl.classId = :removedClassId', { removedClassId: removedClass.id })
+          .innerJoin('ds.teachers', 's_filter', 's_filter.id = :teacherId', { teacherId })
+          .leftJoinAndSelect('ds.teachers', 'allteachers')
+          .getMany();
 
         for (const sched of schedulesToRemove) {
           sched.teachers = sched.teachers.filter((s) => s.id !== teacherId);
+          console.log(sched.teachers);
           await this.dailyScheduleRepository.save(sched);
         }
       }
+
+      teacher.classes = classes;
 
       delete updateData.classIds;
     }

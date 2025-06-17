@@ -85,15 +85,14 @@ export class StudentService {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const futureSchedules = await this.dailyScheduleRepository
-        .createQueryBuilder('ds')
-        .innerJoin('ds.planning', 'pl')
-        .innerJoin('pl.class', 'cl', 'cl.id IN (:...classIds)', { classIds: dto.classIds })
-        .leftJoinAndSelect('ds.students', 'st')
-        .where('ds.date >= :fromDate', { fromDate: today })
-        .andWhere("ds.day = ANY(string_to_array(st.days_enrolled, ','))")
-        .andWhere('ds.day IN (:...daysFilter)', { daysFilter: dto.daysEnrolled })
-        .getMany();
+      const futureSchedules = await this.dailyScheduleRepository.find({
+        where: {
+          planning: { class: { id: In(dto.classIds) } },
+          date: MoreThanOrEqual(today),
+          day: In(dto.daysEnrolled),
+        },
+        relations: ['students'],
+      });
 
       for (const sched of futureSchedules) {
         if (!sched.students.find((s) => s.id === studentId)) {
@@ -253,6 +252,7 @@ export class StudentService {
           where: {
             planning: { class: { id: In(updateData.classIds) } },
             date: MoreThanOrEqual(today),
+            day: In(student.daysEnrolled),
           },
           relations: ['students'],
         });

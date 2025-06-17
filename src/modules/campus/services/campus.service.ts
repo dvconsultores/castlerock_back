@@ -1,7 +1,9 @@
 import {
   ForbiddenException,
+  forwardRef,
   HttpException,
   HttpStatus,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -18,6 +20,7 @@ import { UserRole } from '../../../shared/enums/user-role.enum';
 import { StorageService } from '../../../shared/storage/storage.service';
 import { Multer } from 'multer';
 import { ExceptionHandler } from '../../../helpers/handlers/exception.handler';
+import { StudentService } from '../../student/services/student.service';
 
 @Injectable()
 export class CampusService {

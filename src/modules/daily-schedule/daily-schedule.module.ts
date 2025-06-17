@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DailyScheduleEntity } from './entities/daily-schedule.entity';
 import { DailyScheduleService } from './services/daily-schedule.service';
@@ -11,7 +11,7 @@ import { NotificationModule } from '../notification/notification.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([DailyScheduleEntity]),
-    PlanningModule,
+    forwardRef(() => PlanningModule),
     TeacherModule,
     StudentModule,
     NotificationModule,

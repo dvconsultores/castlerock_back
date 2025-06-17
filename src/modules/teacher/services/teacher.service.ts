@@ -1,19 +1,27 @@
-import { HttpException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  forwardRef,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, MoreThanOrEqual, Repository } from 'typeorm';
 import { TeacherEntity } from '../entities/teacher.entity';
 import { CreateTeacherDto, TeacherDto, UpdateTeacherDto } from '../dto/teacher.dto';
 import { instanceToPlain, plainToClass } from 'class-transformer';
-import { UserService } from '../../user/services/user.service';
-import { CreateUserDto } from '../../user/dto/user.dto';
-import { UserRole } from '../../../shared/enums/user-role.enum';
 import { ClassService } from '../../class/services/class.service';
+import { DailyScheduleEntity } from '../../daily-schedule/entities/daily-schedule.entity';
 
 @Injectable()
 export class TeacherService {
   constructor(
     @InjectRepository(TeacherEntity)
     private readonly repository: Repository<TeacherEntity>,
+    @InjectRepository(DailyScheduleEntity)
+    private readonly dailyScheduleRepository: Repository<DailyScheduleEntity>,
     private readonly classService: ClassService,
   ) {}
 
@@ -22,27 +30,33 @@ export class TeacherService {
   }
 
   async create(dto: CreateTeacherDto): Promise<TeacherEntity> {
-    // const userDto: CreateUserDto = {
-    //   ...dto.user,
-    //   role: UserRole.TEACHER,
-    // };
-
-    // const user = await this.userService.create(userDto);
-
-    // if (!user) {
-    //   throw new InternalServerErrorException('Error creating user');
-    // }
-
-    // const teacherDto: TeacherDto = {
-    //   user: user.id,
-    //   campus: dto.campus,
-    // };
-
     const classes = await this.classService.findByIds(dto.classIds);
 
     const newEntity = plainToClass(TeacherEntity, { ...dto, classes });
 
-    return await this.repository.save(newEntity);
+    const teacher = await this.repository.save(newEntity);
+
+    const teacherId = teacher.id;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const futureSchedules = await this.dailyScheduleRepository.find({
+      where: {
+        planning: { class: { id: In(dto.classIds) } },
+        date: MoreThanOrEqual(today),
+      },
+      relations: ['students'],
+    });
+
+    for (const sched of futureSchedules) {
+      if (!sched.students.find((s) => s.id === teacherId)) {
+        sched.teachers.push(teacher);
+        this.dailyScheduleRepository.save(sched);
+      }
+    }
+
+    return teacher;
   }
 
   async findAll(campusId?: number): Promise<any[]> {
@@ -107,6 +121,44 @@ export class TeacherService {
   }
 
   async update(id: number, updateData: UpdateTeacherDto): Promise<void> {
+    if (updateData.classIds) {
+      const teacher = await this.repository.findOne({
+        where: { id },
+        relations: ['classes', 'dailySchedules'],
+      });
+
+      if (!teacher) {
+        throw new NotFoundException('Teacher not found');
+      }
+
+      const classes = await this.classService.findByIds(updateData.classIds);
+      teacher.classes = classes;
+
+      await this.repository.save(teacher);
+
+      const teacherId = teacher.id;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const futureSchedules = await this.dailyScheduleRepository.find({
+        where: {
+          planning: { class: { id: In(updateData.classIds) } },
+          date: MoreThanOrEqual(today),
+        },
+        relations: ['students'],
+      });
+
+      for (const sched of futureSchedules) {
+        if (!sched.teachers.find((s) => s.id === teacherId)) {
+          sched.teachers.push(teacher);
+          await this.dailyScheduleRepository.save(sched);
+        }
+      }
+
+      delete updateData.classIds;
+    }
+
     const updateResult = await this.repository.update({ id }, plainToClass(TeacherEntity, updateData));
     if (updateResult.affected === 0) {
       throw new NotFoundException('Item not found');
@@ -140,5 +192,9 @@ export class TeacherService {
 
   async findByIds(ids: number[]): Promise<TeacherEntity[]> {
     return await this.repository.find({ where: { id: In(ids) }, relations: ['user', 'campus', 'classes'] });
+  }
+
+  async findByClassId(classId: number): Promise<TeacherEntity[]> {
+    return await this.repository.find({ where: { classes: { id: classId } }, relations: ['user'] });
   }
 }

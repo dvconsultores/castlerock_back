@@ -1,6 +1,14 @@
-import { HttpException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  forwardRef,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Not, Repository } from 'typeorm';
+import { In, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { StudentEntity } from '../entities/student.entity';
 import { CreateStudentDto, FindStudentDtoQuery, UpdateStudentDto } from '../dto/student.dto';
 import { instanceToPlain, plainToClass } from 'class-transformer';
@@ -11,6 +19,8 @@ import { Multer } from 'multer';
 import { AdditionalProgramService } from '../../additional-program/services/additional-program.service';
 import { ProgramType } from '../../../shared/enums/program-type.enum';
 import { ClassService } from '../../class/services/class.service';
+import { WeekDayEnum } from '../../../shared/enums/week-day.enum';
+import { DailyScheduleEntity } from '../../daily-schedule/entities/daily-schedule.entity';
 
 @Injectable()
 export class StudentService {
@@ -22,6 +32,8 @@ export class StudentService {
     private readonly storageService: StorageService,
     private readonly additionalProgramService: AdditionalProgramService,
     private readonly classService: ClassService,
+    @InjectRepository(DailyScheduleEntity)
+    private readonly dailyScheduleRepository: Repository<DailyScheduleEntity>,
   ) {}
 
   async save(entity: StudentEntity): Promise<StudentEntity> {
@@ -66,9 +78,29 @@ export class StudentService {
         additionalPrograms,
       });
 
-      const saved = await this.repository.save(newEntity);
+      const student = await this.repository.save(newEntity);
 
-      return instanceToPlain(saved);
+      const studentId = student.id;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const futureSchedules = await this.dailyScheduleRepository.find({
+        where: {
+          planning: { class: { id: In(dto.classIds) } },
+          date: MoreThanOrEqual(today),
+        },
+        relations: ['students'],
+      });
+
+      for (const sched of futureSchedules) {
+        if (!sched.students.find((s) => s.id === studentId)) {
+          sched.students.push(student);
+          await this.dailyScheduleRepository.save(sched);
+        }
+      }
+
+      return instanceToPlain(student);
     } catch (error) {
       throw new ExceptionHandler(error);
     }
@@ -209,6 +241,26 @@ export class StudentService {
       if (updateData.classIds) {
         const classes = await this.classService.findByIds(updateData.classIds);
         student.classes = classes;
+
+        const studentId = student.id;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const futureSchedules = await this.dailyScheduleRepository.find({
+          where: {
+            planning: { class: { id: In(updateData.classIds) } },
+            date: MoreThanOrEqual(today),
+          },
+          relations: ['students'],
+        });
+
+        for (const sched of futureSchedules) {
+          if (!sched.students.find((s) => s.id === studentId)) {
+            sched.students.push(student);
+            await this.dailyScheduleRepository.save(sched);
+          }
+        }
       }
 
       await this.repository.save(student);
@@ -226,6 +278,12 @@ export class StudentService {
 
   async findByIds(ids: number[]): Promise<StudentEntity[]> {
     const students = await this.repository.findBy({ id: In(ids) });
+
+    return students.map((student) => instanceToPlain(student)) as StudentEntity[];
+  }
+
+  async findByClassIdAndDayEnrolled(classId: number, day: WeekDayEnum): Promise<StudentEntity[]> {
+    const students = await this.repository.find({ where: { classes: { id: classId }, daysEnrolled: In([day]) } });
 
     return students.map((student) => instanceToPlain(student)) as StudentEntity[];
   }

@@ -1,7 +1,9 @@
 import {
   BadRequestException,
+  forwardRef,
   HttpException,
   HttpStatus,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -28,6 +30,10 @@ import {
 import { UserService } from '../../user/services/user.service';
 import { CampusService } from '../../campus/services/campus.service';
 import { ClassService } from '../../class/services/class.service';
+import { WeekDayEnum } from '../../../shared/enums/week-day.enum';
+import { DailyScheduleService } from '../../daily-schedule/services/daily-schedule.service';
+import { TeacherService } from '../../teacher/services/teacher.service';
+import { StudentService } from '../../student/services/student.service';
 
 @Injectable()
 export class PlanningService {
@@ -35,15 +41,18 @@ export class PlanningService {
     @InjectRepository(PlanningEntity)
     private readonly repository: Repository<PlanningEntity>,
     private readonly campusService: CampusService,
-    private readonly userService: UserService,
     private readonly classService: ClassService,
+    @Inject(forwardRef(() => DailyScheduleService))
+    private readonly dailyScheduleService: DailyScheduleService,
+    private readonly teacherService: TeacherService,
+    private readonly studentService: StudentService,
   ) {}
 
   async save(entity: PlanningEntity): Promise<PlanningEntity> {
     return await this.repository.save(entity);
   }
 
-  async create(dto: CreatePlanningDto): Promise<PlanningEntity> {
+  async create(dto: CreatePlanningDto, userId: number): Promise<PlanningEntity> {
     const planningFound = await this.findOneByParams({
       campus: dto.campus,
       class: dto.class,
@@ -82,7 +91,45 @@ export class PlanningService {
 
     const newEntity = this.repository.create(plainToClass(PlanningEntity, planningDto));
 
-    return await this.repository.save(newEntity);
+    const plan = await this.repository.save(newEntity);
+
+    for (const day of Object.values(WeekDayEnum)) {
+      if (day === WeekDayEnum.Sunday || day === WeekDayEnum.Saturday) {
+        continue;
+      }
+
+      const [teachers, students] = await Promise.all([
+        this.teacherService.findByClassId(plan.class.id),
+        this.studentService.findByClassIdAndDayEnrolled(plan.class.id, day),
+      ]);
+
+      const teacherIds = teachers.map((t) => t.id);
+      const studentIds = students.map((s) => s.id);
+
+      await this.dailyScheduleService.create(
+        {
+          planningId: plan.id,
+          day,
+          teacherIds,
+          studentIds,
+        },
+        userId,
+      );
+    }
+
+    const planFound = await this.findOneByParams({
+      campus: dto.campus,
+      class: dto.class,
+      year: dto.year,
+      month: dto.month,
+      week: dto.week,
+    });
+
+    if (!planFound) {
+      throw new InternalServerErrorException('Planning could not be created');
+    }
+
+    return planFound;
   }
 
   async findAll(): Promise<PlanningEntity[]> {
@@ -109,7 +156,7 @@ export class PlanningService {
       ...(week !== undefined && { week }),
     };
 
-    const planning = await this.repository.find({
+    return await this.repository.find({
       where: filters,
       relations: [
         'campus',
@@ -120,8 +167,6 @@ export class PlanningService {
         'dailySchedules.teachers.user',
       ],
     });
-
-    return planning;
   }
 
   async findOneByParams(query: FindPlanningDtoQuery): Promise<PlanningEntity | null> {

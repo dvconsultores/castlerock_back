@@ -1,19 +1,21 @@
 import {
   BadRequestException,
   ForbiddenException,
+  forwardRef,
   HttpException,
   HttpStatus,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, MoreThanOrEqual, Repository } from 'typeorm';
 import { CreateDailyScheduleDto, UpdateDailyScheduleDto } from '../dto/daily-schedule.dto';
 import { plainToClass } from 'class-transformer';
 import { ExceptionHandler } from '../../../helpers/handlers/exception.handler';
 import { DailyScheduleEntity } from '../entities/daily-schedule.entity';
-import { addDays, format } from 'date-fns';
+import { addDays, format, formatISO } from 'date-fns';
 import { PlanningService } from '../../planning/services/planning.service';
 import { TeacherService } from '../../teacher/services/teacher.service';
 import { StudentService } from '../../student/services/student.service';
@@ -24,6 +26,7 @@ export class DailyScheduleService {
   constructor(
     @InjectRepository(DailyScheduleEntity)
     private readonly dailyScheduleRepository: Repository<DailyScheduleEntity>,
+    @Inject(forwardRef(() => PlanningService))
     private readonly planningService: PlanningService,
     private readonly teacherService: TeacherService,
     private readonly studentService: StudentService,
@@ -210,5 +213,18 @@ export class DailyScheduleService {
     if (deleteResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }
+  }
+
+  async findFutureSchedules(classIds: number[]): Promise<DailyScheduleEntity[]> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return await this.dailyScheduleRepository.find({
+      where: {
+        planning: { class: { id: In(classIds) } },
+        date: MoreThanOrEqual(today),
+      },
+      relations: ['students'],
+    });
   }
 }

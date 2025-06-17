@@ -94,6 +94,7 @@ export class PlanningService {
     const plan = await this.repository.save(newEntity);
 
     for (const day of Object.values(WeekDayEnum)) {
+      console.log(`Processing day: ${day}`);
       if (day === WeekDayEnum.Sunday || day === WeekDayEnum.Saturday) {
         continue;
       }
@@ -102,6 +103,8 @@ export class PlanningService {
         this.teacherService.findByClassId(plan.class.id),
         this.studentService.findByClassIdAndDayEnrolled(plan.class.id, day),
       ]);
+
+      console.log(`Found ${teachers.length} teachers and ${students.length} students for day: ${day}`);
 
       const teacherIds = teachers.map((t) => t.id);
       const studentIds = students.map((s) => s.id);

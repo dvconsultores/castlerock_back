@@ -49,12 +49,14 @@ export class TeacherService {
       relations: ['teachers'],
     });
 
-    for (const sched of futureSchedules) {
-      if (!sched.teachers.find((s) => s.id === teacherId)) {
+    const savePromises = futureSchedules
+      .filter((sched) => !sched.teachers.some((t) => t.id === teacherId))
+      .map((sched) => {
         sched.teachers.push(teacher);
-        this.dailyScheduleRepository.save(sched);
-      }
-    }
+        return this.dailyScheduleRepository.save(sched);
+      });
+
+    await Promise.all(savePromises);
 
     return teacher;
   }
@@ -124,7 +126,7 @@ export class TeacherService {
     if (updateData.classIds !== undefined && updateData.classIds.length >= 0) {
       const teacher = await this.repository.findOne({
         where: { id },
-        relations: ['classes', 'dailySchedules'],
+        relations: ['classes'],
       });
 
       if (!teacher) {
@@ -148,12 +150,14 @@ export class TeacherService {
         relations: ['teachers'],
       });
 
-      for (const sched of futureSchedules) {
-        if (!sched.teachers.find((s) => s.id === teacherId)) {
+      const addPromises = futureSchedules
+        .filter((sched) => !sched.teachers.some((t) => t.id === teacherId))
+        .map((sched) => {
           sched.teachers.push(teacher);
-          await this.dailyScheduleRepository.save(sched);
-        }
-      }
+          return this.dailyScheduleRepository.save(sched);
+        });
+
+      const removePromises: Promise<any>[] = [];
 
       for (const removedClass of removedClasses) {
         const schedulesToRemove = await this.dailyScheduleRepository
@@ -161,15 +165,16 @@ export class TeacherService {
           .innerJoin('ds.planning', 'pl')
           .andWhere('pl.classId = :removedClassId', { removedClassId: removedClass.id })
           .innerJoin('ds.teachers', 's_filter', 's_filter.id = :teacherId', { teacherId })
-          .leftJoinAndSelect('ds.teachers', 'allteachers')
+          .leftJoinAndSelect('ds.teachers', 'allTeachers')
           .getMany();
 
-        for (const sched of schedulesToRemove) {
-          sched.teachers = sched.teachers.filter((s) => s.id !== teacherId);
-          console.log(sched.teachers);
-          await this.dailyScheduleRepository.save(sched);
-        }
+        schedulesToRemove.forEach((sched) => {
+          sched.teachers = sched.teachers.filter((t) => t.id !== teacherId);
+          removePromises.push(this.dailyScheduleRepository.save(sched));
+        });
       }
+
+      await Promise.all([...addPromises, ...removePromises]);
 
       teacher.classes = classes;
 
@@ -180,24 +185,6 @@ export class TeacherService {
     if (updateResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }
-    // const teacher = await this.repository.findOne({
-    //   where: { id },
-    //   relations: ['user'],
-    // });
-
-    // if (!teacher) {
-    //   throw new NotFoundException('Teacher not found');
-    // }
-
-    // const { user: userData, ...teacherData } = updateData;
-
-    // Object.assign(teacher, teacherData);
-
-    // if (userData) {
-    //   Object.assign(teacher.user, userData);
-    // }
-
-    // await this.repository.save(teacher);
   }
 
   async remove(id: number): Promise<void> {

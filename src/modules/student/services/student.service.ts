@@ -94,12 +94,14 @@ export class StudentService {
         relations: ['students'],
       });
 
-      for (const sched of futureSchedules) {
-        if (!sched.students.find((s) => s.id === studentId)) {
+      const savePromises = futureSchedules
+        .filter((sched) => !sched.students.some((t) => t.id === studentId))
+        .map((sched) => {
           sched.students.push(student);
-          await this.dailyScheduleRepository.save(sched);
-        }
-      }
+          return this.dailyScheduleRepository.save(sched);
+        });
+
+      await Promise.all(savePromises);
 
       return instanceToPlain(student);
     } catch (error) {
@@ -255,19 +257,23 @@ export class StudentService {
           relations: ['students'],
         });
 
+        const addPromises: Promise<any>[] = [];
+
         for (const sched of futureSchedules) {
           if (!sched.students.find((s) => s.id === studentId)) {
             if (student.daysEnrolled.includes(sched.day)) {
               sched.students.push(student);
-              await this.dailyScheduleRepository.save(sched);
+              addPromises.push(this.dailyScheduleRepository.save(sched));
             }
           } else {
             if (!student.daysEnrolled.includes(sched.day)) {
               sched.students = sched.students.filter((s) => s.id !== studentId);
-              await this.dailyScheduleRepository.save(sched);
+              addPromises.push(this.dailyScheduleRepository.save(sched));
             }
           }
         }
+
+        const removePromises: Promise<any>[] = [];
 
         for (const removedClass of removedClasses) {
           const schedulesToRemove = await this.dailyScheduleRepository
@@ -278,12 +284,13 @@ export class StudentService {
             .leftJoinAndSelect('ds.students', 'allStudents')
             .getMany();
 
-          for (const sched of schedulesToRemove) {
-            sched.students = sched.students.filter((s) => s.id !== studentId);
-            console.log(sched.students);
-            await this.dailyScheduleRepository.save(sched);
-          }
+          schedulesToRemove.forEach((sched) => {
+            sched.students = sched.students.filter((t) => t.id !== studentId);
+            removePromises.push(this.dailyScheduleRepository.save(sched));
+          });
         }
+
+        await Promise.all([...addPromises, ...removePromises]);
 
         student.classes = classes;
       }

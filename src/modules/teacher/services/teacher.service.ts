@@ -46,15 +46,17 @@ export class TeacherService {
         planning: { class: { id: In(dto.classIds) } },
         date: MoreThanOrEqual(today),
       },
-      relations: ['students'],
+      relations: ['teachers'],
     });
 
-    for (const sched of futureSchedules) {
-      if (!sched.students.find((s) => s.id === teacherId)) {
+    const savePromises = futureSchedules
+      .filter((sched) => !sched.teachers.some((t) => t.id === teacherId))
+      .map((sched) => {
         sched.teachers.push(teacher);
-        this.dailyScheduleRepository.save(sched);
-      }
-    }
+        return this.dailyScheduleRepository.save(sched);
+      });
+
+    await Promise.all(savePromises);
 
     return teacher;
   }
@@ -121,20 +123,19 @@ export class TeacherService {
   }
 
   async update(id: number, updateData: UpdateTeacherDto): Promise<void> {
-    if (updateData.classIds) {
+    if (updateData.classIds !== undefined && updateData.classIds.length >= 0) {
       const teacher = await this.repository.findOne({
         where: { id },
-        relations: ['classes', 'dailySchedules'],
+        relations: ['classes'],
       });
 
       if (!teacher) {
         throw new NotFoundException('Teacher not found');
       }
 
-      const classes = await this.classService.findByIds(updateData.classIds);
-      teacher.classes = classes;
+      const classes = updateData.classIds ? await this.classService.findByIds(updateData.classIds) : [];
 
-      await this.repository.save(teacher);
+      const removedClasses = teacher.classes.filter((oldC) => !classes.some((newC) => newC.id === oldC.id));
 
       const teacherId = teacher.id;
 
@@ -143,18 +144,41 @@ export class TeacherService {
 
       const futureSchedules = await this.dailyScheduleRepository.find({
         where: {
-          planning: { class: { id: In(updateData.classIds) } },
+          planning: { class: { id: In(classes.map((c) => c.id)) } },
           date: MoreThanOrEqual(today),
         },
-        relations: ['students'],
+        relations: ['teachers'],
       });
 
-      for (const sched of futureSchedules) {
-        if (!sched.teachers.find((s) => s.id === teacherId)) {
+      const addPromises = futureSchedules
+        .filter((sched) => !sched.teachers.some((t) => t.id === teacherId))
+        .map((sched) => {
           sched.teachers.push(teacher);
-          await this.dailyScheduleRepository.save(sched);
-        }
+          return this.dailyScheduleRepository.save(sched);
+        });
+
+      const removePromises: Promise<any>[] = [];
+
+      for (const removedClass of removedClasses) {
+        const schedulesToRemove = await this.dailyScheduleRepository
+          .createQueryBuilder('ds')
+          .innerJoin('ds.planning', 'pl')
+          .andWhere('pl.classId = :removedClassId', { removedClassId: removedClass.id })
+          .innerJoin('ds.teachers', 's_filter', 's_filter.id = :teacherId', { teacherId })
+          .leftJoinAndSelect('ds.teachers', 'allTeachers')
+          .getMany();
+
+        schedulesToRemove.forEach((sched) => {
+          sched.teachers = sched.teachers.filter((t) => t.id !== teacherId);
+          removePromises.push(this.dailyScheduleRepository.save(sched));
+        });
       }
+
+      await Promise.all([...addPromises, ...removePromises]);
+
+      teacher.classes = classes;
+
+      this.save(teacher);
 
       delete updateData.classIds;
     }
@@ -163,24 +187,6 @@ export class TeacherService {
     if (updateResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }
-    // const teacher = await this.repository.findOne({
-    //   where: { id },
-    //   relations: ['user'],
-    // });
-
-    // if (!teacher) {
-    //   throw new NotFoundException('Teacher not found');
-    // }
-
-    // const { user: userData, ...teacherData } = updateData;
-
-    // Object.assign(teacher, teacherData);
-
-    // if (userData) {
-    //   Object.assign(teacher.user, userData);
-    // }
-
-    // await this.repository.save(teacher);
   }
 
   async remove(id: number): Promise<void> {

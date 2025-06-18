@@ -89,16 +89,19 @@ export class StudentService {
         where: {
           planning: { class: { id: In(dto.classIds) } },
           date: MoreThanOrEqual(today),
+          day: In(dto.daysEnrolled),
         },
         relations: ['students'],
       });
 
-      for (const sched of futureSchedules) {
-        if (!sched.students.find((s) => s.id === studentId)) {
+      const savePromises = futureSchedules
+        .filter((sched) => !sched.students.some((t) => t.id === studentId))
+        .map((sched) => {
           sched.students.push(student);
-          await this.dailyScheduleRepository.save(sched);
-        }
-      }
+          return this.dailyScheduleRepository.save(sched);
+        });
+
+      await Promise.all(savePromises);
 
       return instanceToPlain(student);
     } catch (error) {
@@ -134,10 +137,8 @@ export class StudentService {
       queryBuilder.addSelect(ageInMonthsExpr, 'student_age_in_months');
 
       if (query.program === ProgramType.TODDLER) {
-        console.log('TODDLER');
         queryBuilder.andWhere(`${ageInMonthsExpr} > 24`);
       } else if (query.program === ProgramType.PRIMARY) {
-        console.log('PRIMARY');
         queryBuilder.andWhere(`${ageInMonthsExpr} <= 24`);
       }
     }
@@ -177,7 +178,7 @@ export class StudentService {
     imageContactSecondary?: Multer.File,
   ): Promise<void> {
     try {
-      const student = await this.repository.findOne({ where: { id } });
+      const student = await this.repository.findOne({ where: { id }, relations: ['classes'] });
 
       if (!student) {
         throw new NotFoundException('Student not found');
@@ -190,7 +191,7 @@ export class StudentService {
         updateData.image = imageUrl;
       }
 
-      const { contacts, ...rest } = updateData;
+      const { contacts, additionalProgramIds, ...rest } = updateData;
       Object.assign(student, rest);
 
       if (contacts) {
@@ -238,9 +239,10 @@ export class StudentService {
         student.additionalPrograms = additionalPrograms;
       }
 
-      if (updateData.classIds) {
-        const classes = await this.classService.findByIds(updateData.classIds);
-        student.classes = classes;
+      if (updateData.daysEnrolled || (updateData.classIds !== undefined && updateData.classIds.length >= 0)) {
+        const classes = updateData.classIds ? await this.classService.findByIds(updateData.classIds) : [];
+
+        const removedClasses = student.classes.filter((oldC) => !classes.some((newC) => newC.id === oldC.id));
 
         const studentId = student.id;
 
@@ -249,18 +251,48 @@ export class StudentService {
 
         const futureSchedules = await this.dailyScheduleRepository.find({
           where: {
-            planning: { class: { id: In(updateData.classIds) } },
+            planning: { class: { id: In(classes.map((c) => c.id)) } },
             date: MoreThanOrEqual(today),
           },
           relations: ['students'],
         });
 
+        const addPromises: Promise<any>[] = [];
+
         for (const sched of futureSchedules) {
           if (!sched.students.find((s) => s.id === studentId)) {
-            sched.students.push(student);
-            await this.dailyScheduleRepository.save(sched);
+            if (student.daysEnrolled.includes(sched.day)) {
+              sched.students.push(student);
+              addPromises.push(this.dailyScheduleRepository.save(sched));
+            }
+          } else {
+            if (!student.daysEnrolled.includes(sched.day)) {
+              sched.students = sched.students.filter((s) => s.id !== studentId);
+              addPromises.push(this.dailyScheduleRepository.save(sched));
+            }
           }
         }
+
+        const removePromises: Promise<any>[] = [];
+
+        for (const removedClass of removedClasses) {
+          const schedulesToRemove = await this.dailyScheduleRepository
+            .createQueryBuilder('ds')
+            .innerJoin('ds.planning', 'pl')
+            .andWhere('pl.classId = :removedClassId', { removedClassId: removedClass.id })
+            .innerJoin('ds.students', 's_filter', 's_filter.id = :studentId', { studentId })
+            .leftJoinAndSelect('ds.students', 'allStudents')
+            .getMany();
+
+          schedulesToRemove.forEach((sched) => {
+            sched.students = sched.students.filter((t) => t.id !== studentId);
+            removePromises.push(this.dailyScheduleRepository.save(sched));
+          });
+        }
+
+        await Promise.all([...addPromises, ...removePromises]);
+
+        student.classes = classes;
       }
 
       await this.repository.save(student);

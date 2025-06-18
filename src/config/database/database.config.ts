@@ -19,8 +19,8 @@ export class DatabaseConfig {
       password: configService.get<string>('PASSWORD_ORM'),
       database: configService.get<string>('DATABASE_ORM'),
       entities: [__dirname + '/../../modules/**/entities/*{.ts,.js}'],
-      migrations: [__dirname + `/../../${migrationsPath}/*.ts`],
-      migrationsRun: true,
+      // migrations: [__dirname + `/../../${migrationsPath}/*.ts`],
+      // migrationsRun: true,
       synchronize: true,
       ssl: {
         rejectUnauthorized: false,

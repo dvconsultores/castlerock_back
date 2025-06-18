@@ -192,7 +192,7 @@ export class PlanningService {
   async findOne(id: number): Promise<PlanningEntity | null> {
     return await this.repository.findOne({
       where: { id },
-      relations: ['campus', 'class'],
+      relations: ['campus', 'class', 'dailySchedules', 'dailySchedules.teachers', 'dailySchedules.students'],
     });
   }
 

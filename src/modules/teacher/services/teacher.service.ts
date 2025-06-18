@@ -178,6 +178,8 @@ export class TeacherService {
 
       teacher.classes = classes;
 
+      this.save(teacher);
+
       delete updateData.classIds;
     }
 

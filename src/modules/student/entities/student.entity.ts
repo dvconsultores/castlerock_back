@@ -87,19 +87,19 @@ export class StudentEntity {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @Expose()
-  get program(): ProgramType {
-    if (!this.dateOfBirth) return ProgramType.PRIMARY;
+  // @Expose()
+  // get program(): ProgramType {
+  //   if (!this.dateOfBirth) return ProgramType.PRIMARY;
 
-    const ageInMonths = this.getAgeInMonths();
-    return ageInMonths > 24 ? ProgramType.TODDLER : ProgramType.PRIMARY;
-  }
+  //   const ageInMonths = this.getAgeInMonths();
+  //   return ageInMonths > 24 ? ProgramType.TODDLER : ProgramType.PRIMARY;
+  // }
 
-  private getAgeInMonths(): number {
-    const now = new Date();
-    const birth = new Date(this.dateOfBirth);
-    const years = now.getFullYear() - birth.getFullYear();
-    const months = now.getMonth() - birth.getMonth();
-    return years * 12 + months;
-  }
+  // private getAgeInMonths(): number {
+  //   const now = new Date();
+  //   const birth = new Date(this.dateOfBirth);
+  //   const years = now.getFullYear() - birth.getFullYear();
+  //   const months = now.getMonth() - birth.getMonth();
+  //   return years * 12 + months;
+  // }
 }

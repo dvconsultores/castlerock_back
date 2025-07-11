@@ -31,7 +31,7 @@ export class UserService {
     return await this.repository.save(newEntity);
   }
 
-  async findAll(): Promise<Partial<UserEntity>[]> {
+  async findAll(): Promise<UserEntity[]> {
     return await this.repository.find({
       select: ['id', 'firstName', 'lastName', 'email', 'image', 'role', 'phone'],
     });

@@ -61,14 +61,6 @@ export class DailyScheduleService {
 
       const students = await this.studentService.findByIds(dto.studentIds);
 
-      await students.forEach((student) => {
-        if (student.program !== planning.class.program) {
-          throw new BadRequestException(
-            `Student ${student.firstName} is not enrolled in the same program as the class`,
-          );
-        }
-      });
-
       const dayIndex = {
         Monday: 0,
         Tuesday: 1,

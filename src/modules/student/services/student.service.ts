@@ -128,20 +128,20 @@ export class StudentService {
       });
     }
 
-    if (query.program) {
-      const ageInMonthsExpr = `
-        (EXTRACT(YEAR FROM AGE(NOW(), student.dateOfBirth)) * 12 +
-        EXTRACT(MONTH FROM AGE(NOW(), student.dateOfBirth)))
-      `;
+    // if (query.program) {
+    //   const ageInMonthsExpr = `
+    //     (EXTRACT(YEAR FROM AGE(NOW(), student.dateOfBirth)) * 12 +
+    //     EXTRACT(MONTH FROM AGE(NOW(), student.dateOfBirth)))
+    //   `;
 
-      queryBuilder.addSelect(ageInMonthsExpr, 'student_age_in_months');
+    //   queryBuilder.addSelect(ageInMonthsExpr, 'student_age_in_months');
 
-      if (query.program === ProgramType.TODDLER) {
-        queryBuilder.andWhere(`${ageInMonthsExpr} > 24`);
-      } else if (query.program === ProgramType.PRIMARY) {
-        queryBuilder.andWhere(`${ageInMonthsExpr} <= 24`);
-      }
-    }
+    //   if (query.program === ProgramType.TODDLER) {
+    //     queryBuilder.andWhere(`${ageInMonthsExpr} > 24`);
+    //   } else if (query.program === ProgramType.PRIMARY) {
+    //     queryBuilder.andWhere(`${ageInMonthsExpr} <= 24`);
+    //   }
+    // }
 
     const students = await queryBuilder.getMany();
     return students.map((student) => instanceToPlain(student));

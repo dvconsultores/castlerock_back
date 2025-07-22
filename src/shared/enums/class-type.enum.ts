@@ -1,0 +1,5 @@
+export enum ClassType {
+  ENROLLED = 'ENROLLED',
+  AFTER_SCHOOL = 'AFTER_SCHOOL',
+  BEFORE_SCHOOL = 'BEFORE_SCHOOL',
+}

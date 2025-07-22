@@ -13,6 +13,7 @@ import {
 } from 'class-validator';
 import { ProgramType } from '../../../shared/enums/program-type.enum';
 import { StringToNumber } from '../../../helpers/decorators/string-to-number.decorator';
+import { ClassType } from '../../../shared/enums/class-type.enum';
 
 export class CreateClassDto {
   @ApiProperty()
@@ -43,6 +44,11 @@ export class CreateClassDto {
     required: true,
   })
   image: string;
+
+  @ApiProperty({ enum: ClassType })
+  @IsOptional()
+  @IsEnum(ClassType)
+  classType: ClassType;
 }
 
 export class ClassDto extends CreateClassDto {
@@ -81,4 +87,9 @@ export class UpdateClassDto {
     required: false,
   })
   image?: string;
+
+  @ApiProperty({ enum: ClassType })
+  @IsOptional()
+  @IsEnum(ClassType)
+  classType?: ClassType;
 }

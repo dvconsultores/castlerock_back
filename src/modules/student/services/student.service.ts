@@ -116,7 +116,17 @@ export class StudentService {
       .leftJoinAndSelect('student.contacts', 'contacts')
       .leftJoinAndSelect('student.additionalPrograms', 'additionalPrograms')
       .leftJoinAndSelect('student.classes', 'classes')
-      .select(['student', 'campus.id', 'campus.name', 'contacts', 'additionalPrograms', 'classes']);
+      .leftJoinAndSelect('classes.campus', 'classCampus')
+      .select([
+        'student',
+        'campus.id',
+        'campus.name',
+        'contacts',
+        'additionalPrograms',
+        'classes',
+        'classCampus.id',
+        'classCampus.name',
+      ]);
 
     if (query.campusId) {
       queryBuilder.where('campus.id = :campusId', { campusId: query.campusId });

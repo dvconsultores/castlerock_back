@@ -154,7 +154,8 @@ export class StudentService {
       .leftJoinAndSelect('student.contacts', 'contacts')
       .leftJoinAndSelect('student.additionalPrograms', 'additionalPrograms')
       .leftJoinAndSelect('student.classes', 'classes')
-      .select(['student', 'campus.id', 'campus.name', 'contacts', 'additionalPrograms', 'classes'])
+      .leftJoinAndSelect('student.classes.campus', 'campusClasses')
+      .select(['student', 'campus.id', 'campus.name', 'contacts', 'additionalPrograms', 'classes', 'classes.campus'])
       .where('student.id = :id', { id })
       .getOne();
 

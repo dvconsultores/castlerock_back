@@ -13,6 +13,7 @@ import { CampusEntity } from '../../campus/entities/campus.entity';
 import { ProgramType } from '../../../shared/enums/program-type.enum';
 import { StudentEntity } from '../../student/entities/student.entity';
 import { TeacherEntity } from '../../teacher/entities/teacher.entity';
+import { ClassType } from '../../../shared/enums/class-type.enum';
 
 @Entity({ name: 'classes' })
 export class ClassEntity {
@@ -42,4 +43,12 @@ export class ClassEntity {
 
   @ManyToMany(() => StudentEntity, (student) => student.classes)
   students: StudentEntity[];
+
+  @Column({
+    name: 'class_type',
+    default: ClassType.ENROLLED,
+    type: 'enum',
+    enum: ClassType,
+  })
+  classType: ClassType;
 }

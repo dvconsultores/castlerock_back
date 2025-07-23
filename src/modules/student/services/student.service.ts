@@ -252,7 +252,7 @@ export class StudentService {
         updateData.image = imageUrl;
       }
 
-      const { contacts, additionalProgramIds, beforeSchoolDays, ...rest } = updateData;
+      const { contacts, additionalProgramIds, ...rest } = updateData;
       Object.assign(student, rest);
 
       if (contacts) {
@@ -368,6 +368,8 @@ export class StudentService {
             },
             relations: ['students'],
           });
+
+          console.log('Future schedules before school:', futureSchedulesBeforeSchool);
 
           for (const sched of futureSchedulesBeforeSchool) {
             if (!sched.students.find((s) => s.id === studentId)) {

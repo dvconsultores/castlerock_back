@@ -252,7 +252,7 @@ export class StudentService {
         updateData.image = imageUrl;
       }
 
-      const { contacts, additionalProgramIds, ...rest } = updateData;
+      const { contacts, additionalProgramIds, beforeSchoolDays, ...rest } = updateData;
       Object.assign(student, rest);
 
       if (contacts) {
@@ -341,7 +341,6 @@ export class StudentService {
             where: {
               planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.AFTER_SCHOOL } },
               date: MoreThanOrEqual(today),
-              day: In(student.afterSchoolDays || []),
             },
             relations: ['students'],
           });
@@ -366,19 +365,22 @@ export class StudentService {
             where: {
               planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.BEFORE_SCHOOL } },
               date: MoreThanOrEqual(today),
-              day: In(student.beforeSchoolDays || []),
             },
             relations: ['students'],
           });
 
           for (const sched of futureSchedulesBeforeSchool) {
             if (!sched.students.find((s) => s.id === studentId)) {
+              console.log('Adding student to schedule:', sched.id, 'for day:', sched.day);
               if (student.beforeSchoolDays.includes(sched.day)) {
                 sched.students.push(student);
                 addPromises.push(this.dailyScheduleRepository.save(sched));
               }
             } else {
+              console.log(student.beforeSchoolDays, sched.day);
+
               if (!student.beforeSchoolDays.includes(sched.day)) {
+                console.log('Removing student from schedule:', sched.id, 'for day:', sched.day);
                 sched.students = sched.students.filter((s) => s.id !== studentId);
                 addPromises.push(this.dailyScheduleRepository.save(sched));
               }

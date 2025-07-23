@@ -421,13 +421,14 @@ export class StudentService {
     return students.map((student) => instanceToPlain(student)) as StudentEntity[];
   }
 
-  async findByClassIdAndDayEnrolled(classId: number, day: WeekDayEnum): Promise<StudentEntity[]> {
+  async findByClassIdAndDayEnrolled(classId: number, day: WeekDayEnum, classType: ClassType): Promise<StudentEntity[]> {
     const students = await this.repository
       .createQueryBuilder('student')
       .innerJoin('student.classes', 'class', 'class.id = :classId', { classId })
       .andWhere(":day = ANY(string_to_array(student.days_enrolled, ','))", {
         day,
       })
+      .andWhere('class.classType = :classType', { classType })
       .getMany();
 
     return students;

@@ -100,7 +100,7 @@ export class PlanningService {
       }
 
       const [teachers, students] = await Promise.all([
-        this.teacherService.findByClassId(plan.class.id, plan.class.classType),
+        this.teacherService.findByClassId(plan.class.id),
         this.studentService.findByClassIdAndDayEnrolled(plan.class.id, day, plan.class.classType),
       ]);
 

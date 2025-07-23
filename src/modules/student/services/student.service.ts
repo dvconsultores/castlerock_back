@@ -422,13 +422,25 @@ export class StudentService {
   }
 
   async findByClassIdAndDayEnrolled(classId: number, day: WeekDayEnum, classType: ClassType): Promise<StudentEntity[]> {
+    let column: string;
+
+    switch (classType) {
+      case ClassType.AFTER_SCHOOL:
+        column = 'student.after_school_days';
+        break;
+      case ClassType.BEFORE_SCHOOL:
+        column = 'student.before_school_days';
+        break;
+      case ClassType.ENROLLED:
+      default:
+        column = 'student.days_enrolled';
+        break;
+    }
+
     const students = await this.repository
       .createQueryBuilder('student')
       .innerJoin('student.classes', 'class', 'class.id = :classId', { classId })
-      .andWhere(":day = ANY(string_to_array(student.days_enrolled, ','))", {
-        day,
-      })
-      .andWhere('class.classType = :classType', { classType })
+      .andWhere(`:day = ANY(string_to_array(${column}, ','))`, { day })
       .getMany();
 
     return students;

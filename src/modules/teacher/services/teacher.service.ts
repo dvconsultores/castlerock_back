@@ -14,7 +14,6 @@ import { CreateTeacherDto, TeacherDto, UpdateTeacherDto } from '../dto/teacher.d
 import { instanceToPlain, plainToClass } from 'class-transformer';
 import { ClassService } from '../../class/services/class.service';
 import { DailyScheduleEntity } from '../../daily-schedule/entities/daily-schedule.entity';
-import { ClassType } from '../../../shared/enums/class-type.enum';
 
 @Injectable()
 export class TeacherService {
@@ -201,10 +200,7 @@ export class TeacherService {
     return await this.repository.find({ where: { id: In(ids) }, relations: ['user', 'campus', 'classes'] });
   }
 
-  async findByClassId(classId: number, classType: ClassType): Promise<TeacherEntity[]> {
-    return await this.repository.find({
-      where: { classes: { id: classId, classType: classType } },
-      relations: ['user'],
-    });
+  async findByClassId(classId: number): Promise<TeacherEntity[]> {
+    return await this.repository.find({ where: { classes: { id: classId } }, relations: ['user'] });
   }
 }

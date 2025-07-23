@@ -300,7 +300,7 @@ export class StudentService {
         student.additionalPrograms = additionalPrograms;
       }
 
-      if (updateData.daysEnrolled || (updateData.classIds !== undefined && updateData.classIds.length >= 0)) {
+      if (updateData.classIds !== undefined && updateData.classIds.length >= 0) {
         const classes = updateData.classIds ? await this.classService.findByIds(updateData.classIds) : [];
 
         const removedClasses = student.classes.filter((oldC) => !classes.some((newC) => newC.id === oldC.id));
@@ -310,72 +310,78 @@ export class StudentService {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const futureSchedulesEnrolled = await this.dailyScheduleRepository.find({
-          where: {
-            planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.ENROLLED } },
-            date: MoreThanOrEqual(today),
-          },
-          relations: ['students'],
-        });
-
         const addPromises: Promise<any>[] = [];
 
-        for (const sched of futureSchedulesEnrolled) {
-          if (!sched.students.find((s) => s.id === studentId)) {
-            if (student.daysEnrolled.includes(sched.day)) {
-              sched.students.push(student);
-              addPromises.push(this.dailyScheduleRepository.save(sched));
-            }
-          } else {
-            if (!student.daysEnrolled.includes(sched.day)) {
-              sched.students = sched.students.filter((s) => s.id !== studentId);
-              addPromises.push(this.dailyScheduleRepository.save(sched));
+        if (updateData.daysEnrolled) {
+          const futureSchedulesEnrolled = await this.dailyScheduleRepository.find({
+            where: {
+              planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.ENROLLED } },
+              date: MoreThanOrEqual(today),
+            },
+            relations: ['students'],
+          });
+
+          for (const sched of futureSchedulesEnrolled) {
+            if (!sched.students.find((s) => s.id === studentId)) {
+              if (student.daysEnrolled.includes(sched.day)) {
+                sched.students.push(student);
+                addPromises.push(this.dailyScheduleRepository.save(sched));
+              }
+            } else {
+              if (!student.daysEnrolled.includes(sched.day)) {
+                sched.students = sched.students.filter((s) => s.id !== studentId);
+                addPromises.push(this.dailyScheduleRepository.save(sched));
+              }
             }
           }
         }
 
-        const futureSchedulesAfterSchool = await this.dailyScheduleRepository.find({
-          where: {
-            planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.AFTER_SCHOOL } },
-            date: MoreThanOrEqual(today),
-            day: In(student.afterSchoolDays || []),
-          },
-          relations: ['students'],
-        });
+        if (student.afterSchoolDays) {
+          const futureSchedulesAfterSchool = await this.dailyScheduleRepository.find({
+            where: {
+              planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.AFTER_SCHOOL } },
+              date: MoreThanOrEqual(today),
+              day: In(student.afterSchoolDays || []),
+            },
+            relations: ['students'],
+          });
 
-        for (const sched of futureSchedulesAfterSchool) {
-          if (!sched.students.find((s) => s.id === studentId)) {
-            if (student.afterSchoolDays.includes(sched.day)) {
-              sched.students.push(student);
-              addPromises.push(this.dailyScheduleRepository.save(sched));
-            }
-          } else {
-            if (!student.afterSchoolDays.includes(sched.day)) {
-              sched.students = sched.students.filter((s) => s.id !== studentId);
-              addPromises.push(this.dailyScheduleRepository.save(sched));
+          for (const sched of futureSchedulesAfterSchool) {
+            if (!sched.students.find((s) => s.id === studentId)) {
+              if (student.afterSchoolDays.includes(sched.day)) {
+                sched.students.push(student);
+                addPromises.push(this.dailyScheduleRepository.save(sched));
+              }
+            } else {
+              if (!student.afterSchoolDays.includes(sched.day)) {
+                sched.students = sched.students.filter((s) => s.id !== studentId);
+                addPromises.push(this.dailyScheduleRepository.save(sched));
+              }
             }
           }
         }
 
-        const futureSchedulesBeforeSchool = await this.dailyScheduleRepository.find({
-          where: {
-            planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.BEFORE_SCHOOL } },
-            date: MoreThanOrEqual(today),
-            day: In(student.beforeSchoolDays || []),
-          },
-          relations: ['students'],
-        });
+        if (student.beforeSchoolDays) {
+          const futureSchedulesBeforeSchool = await this.dailyScheduleRepository.find({
+            where: {
+              planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.BEFORE_SCHOOL } },
+              date: MoreThanOrEqual(today),
+              day: In(student.beforeSchoolDays || []),
+            },
+            relations: ['students'],
+          });
 
-        for (const sched of futureSchedulesBeforeSchool) {
-          if (!sched.students.find((s) => s.id === studentId)) {
-            if (student.beforeSchoolDays.includes(sched.day)) {
-              sched.students.push(student);
-              addPromises.push(this.dailyScheduleRepository.save(sched));
-            }
-          } else {
-            if (!student.beforeSchoolDays.includes(sched.day)) {
-              sched.students = sched.students.filter((s) => s.id !== studentId);
-              addPromises.push(this.dailyScheduleRepository.save(sched));
+          for (const sched of futureSchedulesBeforeSchool) {
+            if (!sched.students.find((s) => s.id === studentId)) {
+              if (student.beforeSchoolDays.includes(sched.day)) {
+                sched.students.push(student);
+                addPromises.push(this.dailyScheduleRepository.save(sched));
+              }
+            } else {
+              if (!student.beforeSchoolDays.includes(sched.day)) {
+                sched.students = sched.students.filter((s) => s.id !== studentId);
+                addPromises.push(this.dailyScheduleRepository.save(sched));
+              }
             }
           }
         }

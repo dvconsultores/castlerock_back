@@ -58,17 +58,15 @@ export class AuthService {
     if (user.role === UserRole.TEACHER) {
       const teacher = await this.teacherService.findOneByUserId(user.id, ['user', 'campus']);
 
-      if (!teacher) {
-        throw new NotFoundException('Teacher not found');
+      if (teacher) {
+        campus = await this.campusService.findOne(teacher.campus.id);
+
+        if (!campus) {
+          throw new NotFoundException('Campus not found');
+        }
+
+        payload.campusId = campus.id;
       }
-
-      campus = await this.campusService.findOne(teacher.campus.id);
-
-      if (!campus) {
-        throw new NotFoundException('Campus not found');
-      }
-
-      payload.campusId = campus.id;
     }
 
     return {

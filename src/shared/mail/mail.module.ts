@@ -19,6 +19,9 @@ import { EnvironmentVariables } from '../../config/env';
             user: config.get('MAIL_USER'),
             pass: config.get('MAIL_PASSWORD'),
           },
+          tls: {
+            rejectUnauthorized: false,
+          },
         },
         defaults: {
           from: `"Kindergarten" <${config.get('MAIL_FROM')}>`,
@@ -31,7 +34,7 @@ import { EnvironmentVariables } from '../../config/env';
           },
         },
       }),
-      inject: [ConfigService<EnvironmentVariables>],
+      inject: [ConfigService],
     }),
   ],
   providers: [MailService],

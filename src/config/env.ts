@@ -43,6 +43,9 @@ export class EnvironmentVariables {
   MAIL_HOST!: string;
 
   @IsString()
+  MAIL_PORT!: string;
+
+  @IsString()
   MAIL_USER!: string;
 
   @IsString()

@@ -19,7 +19,7 @@ export class TeacherEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @OneToOne(() => UserEntity)
+  @OneToOne(() => UserEntity, { onDelete: 'CASCADE' })
   @JoinColumn()
   user: UserEntity;
 

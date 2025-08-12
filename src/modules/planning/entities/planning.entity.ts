@@ -33,14 +33,14 @@ export class PlanningEntity {
   @Column({ name: 'end_date', type: 'date' })
   endDate: Date;
 
-  @ManyToOne(() => UserEntity)
+  @ManyToOne(() => UserEntity, { nullable: false, onDelete: 'SET NULL' })
   admin: UserEntity;
 
-  @ManyToOne(() => CampusEntity)
+  @ManyToOne(() => CampusEntity, { nullable: false, onDelete: 'CASCADE' })
   campus: CampusEntity;
 
   @ManyToOne(() => ClassEntity, {
-    onDelete: 'SET NULL',
+    onDelete: 'CASCADE',
   })
   class: ClassEntity;
 

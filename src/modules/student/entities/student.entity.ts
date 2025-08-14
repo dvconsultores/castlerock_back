@@ -75,10 +75,18 @@ export class StudentEntity {
   @ManyToOne(() => CampusEntity, (campus) => campus.students, { nullable: true, onDelete: 'SET NULL' })
   campus: CampusEntity;
 
-  @ManyToMany(() => ClassEntity, (classEntity) => classEntity.students, {
-    cascade: true,
+  @ManyToMany(() => ClassEntity, (c) => c.students, { cascade: true })
+  @JoinTable({
+    name: 'students_classes_classes',
+    joinColumn: {
+      name: 'studentsId',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'classesId',
+      referencedColumnName: 'id',
+    },
   })
-  @JoinTable()
   classes: ClassEntity[];
 
   @CreateDateColumn({ name: 'created_at' })

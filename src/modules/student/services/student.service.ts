@@ -336,7 +336,7 @@ export class StudentService {
           }
         }
 
-        if (student.afterSchoolDays) {
+        if (updateData.afterSchoolDays) {
           const futureSchedulesAfterSchool = await this.dailyScheduleRepository.find({
             where: {
               planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.AFTER_SCHOOL } },
@@ -360,7 +360,8 @@ export class StudentService {
           }
         }
 
-        if (student.beforeSchoolDays) {
+        console.log('Updating before school days', updateData.beforeSchoolDays);
+        if (updateData.beforeSchoolDays) {
           const futureSchedulesBeforeSchool = await this.dailyScheduleRepository.find({
             where: {
               planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.BEFORE_SCHOOL } },
@@ -373,16 +374,17 @@ export class StudentService {
 
           for (const sched of futureSchedulesBeforeSchool) {
             if (!sched.students.find((s) => s.id === studentId)) {
-              console.log('Adding student to schedule:', sched.id, 'for day:', sched.day);
+              console.log('sched.students', sched.students);
+              console.log('Adding student to schedule:', sched.id, 'for day:', sched.day, 'date:', sched.date);
               if (student.beforeSchoolDays.includes(sched.day)) {
                 sched.students.push(student);
                 addPromises.push(this.dailyScheduleRepository.save(sched));
               }
             } else {
-              console.log(student.beforeSchoolDays, sched.day);
+              console.log(student.beforeSchoolDays, sched.day, sched.date);
 
               if (!student.beforeSchoolDays.includes(sched.day)) {
-                console.log('Removing student from schedule:', sched.id, 'for day:', sched.day);
+                console.log('Removing student from schedule:', sched.id, 'for day:', sched.day, 'date:', sched.date);
                 sched.students = sched.students.filter((s) => s.id !== studentId);
                 addPromises.push(this.dailyScheduleRepository.save(sched));
               }

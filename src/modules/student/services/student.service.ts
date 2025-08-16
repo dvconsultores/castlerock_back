@@ -296,6 +296,7 @@ export class StudentService {
       }
 
       if (updateData.additionalProgramIds) {
+        console.log('Updating additional programs:', updateData.additionalProgramIds);
         const additionalPrograms = await this.additionalProgramService.findByIds(updateData.additionalProgramIds);
         student.additionalPrograms = additionalPrograms;
       }
@@ -312,7 +313,7 @@ export class StudentService {
 
         const addPromises: Promise<any>[] = [];
 
-        if (updateData.daysEnrolled) {
+        if (Array.isArray(updateData.daysEnrolled)) {
           const futureSchedulesEnrolled = await this.dailyScheduleRepository.find({
             where: {
               planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.ENROLLED } },
@@ -336,7 +337,7 @@ export class StudentService {
           }
         }
 
-        if (updateData.afterSchoolDays) {
+        if (Array.isArray(updateData.afterSchoolDays)) {
           const futureSchedulesAfterSchool = await this.dailyScheduleRepository.find({
             where: {
               planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.AFTER_SCHOOL } },
@@ -361,7 +362,7 @@ export class StudentService {
         }
 
         console.log('Updating before school days', updateData.beforeSchoolDays);
-        if (updateData.beforeSchoolDays) {
+        if (Array.isArray(updateData.beforeSchoolDays)) {
           const futureSchedulesBeforeSchool = await this.dailyScheduleRepository.find({
             where: {
               planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.BEFORE_SCHOOL } },
@@ -414,8 +415,15 @@ export class StudentService {
         student.classes = classes;
       }
 
+      console.dir(student, { depth: null });
+
+      if (!student.campus) {
+        student.campus = null as any;
+      }
+
       await this.repository.save(student);
     } catch (error) {
+      console.error('Error updating student:', error);
       throw new ExceptionHandler(error);
     }
   }

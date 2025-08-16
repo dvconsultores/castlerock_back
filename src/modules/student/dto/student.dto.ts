@@ -8,6 +8,7 @@ import {
   IsUUID,
   IsNumber,
   IsNotEmpty,
+  IsInt,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
@@ -15,6 +16,7 @@ import { WeekDayEnum } from '../../../shared/enums/week-day.enum';
 import { RelationshipType } from '../../../shared/enums/relationship-type.enum';
 import { ToArray } from '../../../helpers/decorators/to-array.decorator';
 import { ProgramType } from '../../../shared/enums/program-type.enum';
+import { ToEmptyArray } from '../../../helpers/decorators/to-empty-array.decorator';
 
 export class CreateContactPersonDto {
   @ApiProperty()
@@ -68,6 +70,8 @@ export class CreateStudentDto {
   startDateOfClasses?: Date;
 
   @ApiProperty({ type: [String], enum: WeekDayEnum, isArray: true })
+  @IsOptional()
+  @ToEmptyArray()
   @ToArray()
   @IsArray()
   @IsEnum(WeekDayEnum, { each: true })
@@ -75,6 +79,7 @@ export class CreateStudentDto {
 
   @ApiPropertyOptional({ type: [String], enum: WeekDayEnum, isArray: true })
   @IsOptional()
+  @ToEmptyArray()
   @ToArray()
   @IsArray()
   @IsEnum(WeekDayEnum, { each: true })
@@ -82,19 +87,32 @@ export class CreateStudentDto {
 
   @ApiPropertyOptional({ type: [String], enum: WeekDayEnum, isArray: true })
   @IsOptional()
+  @ToEmptyArray()
   @ToArray()
   @IsArray()
   @IsEnum(WeekDayEnum, { each: true })
   afterSchoolDays?: WeekDayEnum[];
 
-  @ApiProperty()
+  @ApiPropertyOptional({ type: [Number], isArray: true })
+  @IsOptional()
   @Transform(({ value }) => {
-    if (Array.isArray(value)) return value.map(Number);
-    if (typeof value === 'string') return value.split(',').map(Number);
-    return [];
+    const raw =
+      value == null || value === ''
+        ? []
+        : Array.isArray(value)
+          ? value
+          : typeof value === 'string'
+            ? value.split(',')
+            : [value];
+    const nums = raw
+      .map((v) => (typeof v === 'string' ? v.trim() : v))
+      .filter((v) => v !== '' && v !== null && v !== undefined)
+      .map((v) => Number(v))
+      .filter((n) => Number.isFinite(n));
+    return nums;
   })
   @IsArray()
-  @IsNumber({}, { each: true })
+  @IsInt({ each: true })
   additionalProgramIds: number[];
 
   @ApiProperty()
@@ -149,14 +167,26 @@ export class CreateStudentDto {
   })
   imageContactSecondary: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional({ type: [Number], isArray: true })
+  @IsOptional()
   @Transform(({ value }) => {
-    if (Array.isArray(value)) return value.map(Number);
-    if (typeof value === 'string') return value.split(',').map(Number);
-    return [];
+    const raw =
+      value == null || value === ''
+        ? []
+        : Array.isArray(value)
+          ? value
+          : typeof value === 'string'
+            ? value.split(',')
+            : [value];
+    const nums = raw
+      .map((v) => (typeof v === 'string' ? v.trim() : v))
+      .filter((v) => v !== '' && v !== null && v !== undefined)
+      .map((v) => Number(v))
+      .filter((n) => Number.isFinite(n));
+    return nums;
   })
   @IsArray()
-  @IsNumber({}, { each: true })
+  @IsInt({ each: true })
   classIds: number[];
 }
 
@@ -171,6 +201,7 @@ export class FindStudentDtoQuery {
 
   @ApiProperty({ required: false, enum: WeekDayEnum })
   @IsOptional()
+  @ToEmptyArray()
   @IsEnum(WeekDayEnum)
   dayEnrolled?: WeekDayEnum;
 

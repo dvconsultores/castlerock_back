@@ -71,26 +71,20 @@ export class CreateStudentDto {
 
   @ApiProperty({ type: [String], enum: WeekDayEnum, isArray: true })
   @IsOptional()
-  @ToEmptyArray()
+  // @ToEmptyArray()
   @ToArray()
-  @IsArray()
-  @IsEnum(WeekDayEnum, { each: true })
   daysEnrolled: WeekDayEnum[];
 
   @ApiPropertyOptional({ type: [String], enum: WeekDayEnum, isArray: true })
   @IsOptional()
-  @ToEmptyArray()
+  // @ToEmptyArray()
   @ToArray()
-  @IsArray()
-  @IsEnum(WeekDayEnum, { each: true })
   beforeSchoolDays?: WeekDayEnum[];
 
   @ApiPropertyOptional({ type: [String], enum: WeekDayEnum, isArray: true })
   @IsOptional()
-  @ToEmptyArray()
+  // @ToEmptyArray()
   @ToArray()
-  @IsArray()
-  @IsEnum(WeekDayEnum, { each: true })
   afterSchoolDays?: WeekDayEnum[];
 
   @ApiPropertyOptional({ type: [Number], isArray: true })
@@ -201,8 +195,9 @@ export class FindStudentDtoQuery {
 
   @ApiProperty({ required: false, enum: WeekDayEnum })
   @IsOptional()
-  @ToEmptyArray()
-  @IsEnum(WeekDayEnum)
+  @IsOptional()
+  // @ToEmptyArray()
+  @ToArray()
   dayEnrolled?: WeekDayEnum;
 
   @ApiProperty({ required: false, enum: ProgramType })

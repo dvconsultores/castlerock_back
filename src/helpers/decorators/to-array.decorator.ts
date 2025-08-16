@@ -8,6 +8,10 @@ export function ToArray() {
       return value.split(',').map((v) => v.trim());
     }
 
+    if (value == 'null' || value === null) {
+      return [];
+    }
+
     return [value];
   });
 }

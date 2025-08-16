@@ -252,6 +252,8 @@ export class StudentService {
         updateData.image = imageUrl;
       }
 
+      const classesIds = student.classes || [];
+
       const { contacts, additionalProgramIds, ...rest } = updateData;
       Object.assign(student, rest);
 
@@ -301,8 +303,9 @@ export class StudentService {
         student.additionalPrograms = additionalPrograms;
       }
 
-      if (updateData.classIds !== undefined && updateData.classIds.length >= 0) {
-        const classes = updateData.classIds ? await this.classService.findByIds(updateData.classIds) : [];
+      console.log('Updating classes:', updateData.classIds, classesIds);
+      if ((updateData.classIds !== undefined && updateData.classIds.length >= 0) || classesIds.length > 0) {
+        const classes = updateData.classIds ? await this.classService.findByIds(updateData.classIds) : classesIds;
 
         const removedClasses = student.classes.filter((oldC) => !classes.some((newC) => newC.id === oldC.id));
 

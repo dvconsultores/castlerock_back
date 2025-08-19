@@ -24,7 +24,7 @@ import { EnvironmentVariables } from '../../config/env';
           },
         },
         defaults: {
-          from: `"Kindergarten" <${config.get('MAIL_FROM')}>`,
+          from: `"no-reply" <${config.get('MAIL_FROM')}>`,
         },
         template: {
           dir: join(__dirname, 'templates'),

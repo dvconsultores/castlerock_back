@@ -24,7 +24,7 @@ import { EnvironmentVariables } from '../../config/env';
           },
         },
         defaults: {
-          from: `"no-reply" <${config.get('MAIL_FROM')}>`,
+          from: `"stutris" <${config.get('MAIL_FROM')}>`,
         },
         template: {
           dir: join(__dirname, 'templates'),

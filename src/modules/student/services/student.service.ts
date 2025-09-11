@@ -86,10 +86,14 @@ export class StudentService {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
+      const startFrom = student.startDateOfClasses
+        ? new Date(new Date(student.startDateOfClasses as any).setHours(0, 0, 0, 0))
+        : today;
+
       const futureSchedulesEnrolled = await this.dailyScheduleRepository.find({
         where: {
           planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.ENROLLED } },
-          date: MoreThanOrEqual(today),
+          date: MoreThanOrEqual(startFrom),
           day: In(dto.daysEnrolled),
         },
         relations: ['students'],
@@ -108,7 +112,7 @@ export class StudentService {
         const futureSchedulesAfterSchool = await this.dailyScheduleRepository.find({
           where: {
             planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.AFTER_SCHOOL } },
-            date: MoreThanOrEqual(today),
+            date: MoreThanOrEqual(startFrom),
             day: In(dto.afterSchoolDays),
           },
           relations: ['students'],
@@ -128,7 +132,7 @@ export class StudentService {
         const futureSchedulesBeforeSchool = await this.dailyScheduleRepository.find({
           where: {
             planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.BEFORE_SCHOOL } },
-            date: MoreThanOrEqual(today),
+            date: MoreThanOrEqual(startFrom),
             day: In(dto.beforeSchoolDays),
           },
           relations: ['students'],
@@ -314,13 +318,17 @@ export class StudentService {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
+        const startFrom = student.startDateOfClasses
+          ? new Date(new Date(student.startDateOfClasses as any).setHours(0, 0, 0, 0))
+          : today;
+
         const addPromises: Promise<any>[] = [];
 
         if (Array.isArray(updateData.daysEnrolled)) {
           const futureSchedulesEnrolled = await this.dailyScheduleRepository.find({
             where: {
               planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.ENROLLED } },
-              date: MoreThanOrEqual(today),
+              date: MoreThanOrEqual(startFrom),
             },
             relations: ['students'],
           });
@@ -344,7 +352,7 @@ export class StudentService {
           const futureSchedulesAfterSchool = await this.dailyScheduleRepository.find({
             where: {
               planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.AFTER_SCHOOL } },
-              date: MoreThanOrEqual(today),
+              date: MoreThanOrEqual(startFrom),
             },
             relations: ['students'],
           });
@@ -369,7 +377,7 @@ export class StudentService {
           const futureSchedulesBeforeSchool = await this.dailyScheduleRepository.find({
             where: {
               planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.BEFORE_SCHOOL } },
-              date: MoreThanOrEqual(today),
+              date: MoreThanOrEqual(startFrom),
             },
             relations: ['students'],
           });

@@ -40,47 +40,37 @@ export class DailyScheduleService {
   async create(dto: CreateDailyScheduleDto, adminId: number): Promise<DailyScheduleEntity> {
     try {
       const dailyScheduleFound = await this.dailyScheduleRepository.findOne({
-        where: {
-          planning: { id: dto.planningId },
-          day: dto.day,
-        },
+        where: { planning: { id: dto.planningId }, day: dto.day },
         relations: ['planning'],
       });
-
       if (dailyScheduleFound) {
         throw new BadRequestException('Daily schedule already exists for this planning and day');
       }
 
       const planning = await this.planningService.findOneWithRelations(dto.planningId, ['class']);
-
-      if (!planning) {
-        throw new NotFoundException('Planning not found');
-      }
+      if (!planning) throw new NotFoundException('Planning not found');
 
       const teachers = await this.teacherService.findByIds(dto.teacherIds);
 
-      const students = await this.studentService.findByIds(dto.studentIds);
-
-      const dayIndex = {
-        Monday: 0,
-        Tuesday: 1,
-        Wednesday: 2,
-        Thursday: 3,
-        Friday: 4,
-        Saturday: 5,
-        Sunday: 6,
-      }[dto.day];
-
+      const dayIndex = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 }[dto.day];
       const baseDate = new Date(planning.startDate);
+      const scheduleDate = addDays(baseDate, dayIndex);
+      scheduleDate.setHours(0, 0, 0, 0);
 
-      const date = addDays(baseDate, dayIndex);
+      const allStudents = await this.studentService.findByIds(dto.studentIds);
+      const students = allStudents.filter((s) => {
+        if (!s.startDateOfClasses) return true;
+        const sd = new Date(s.startDateOfClasses as any);
+        sd.setHours(0, 0, 0, 0);
+        return sd.getTime() <= scheduleDate.getTime();
+      });
 
       const dailyScheduleEntity = plainToClass(DailyScheduleEntity, {
         planning,
         teachers,
         students,
         day: dto.day,
-        date: format(date, 'yyyy-MM-dd'),
+        date: scheduleDate,
         admin: adminId,
       });
 
@@ -117,59 +107,62 @@ export class DailyScheduleService {
     try {
       const dailyScheduleFound = await this.dailyScheduleRepository.findOne({
         where: { id },
-        relations: ['planning', 'teachers'],
+        relations: ['planning', 'teachers', 'students', 'planning.class'],
       });
-
-      if (!dailyScheduleFound) {
-        throw new BadRequestException('Daily schedule not found');
-      }
+      if (!dailyScheduleFound) throw new BadRequestException('Daily schedule not found');
 
       if (updateData.planningId) {
         const planning = await this.planningService.findOne(updateData.planningId);
-
-        if (!planning) {
-          throw new NotFoundException('Planning not found');
-        }
-
+        if (!planning) throw new NotFoundException('Planning not found');
         dailyScheduleFound.planning = planning;
       }
 
       if (updateData.teacherIds) {
         const teachers = await this.teacherService.findByIds(updateData.teacherIds);
-
-        if (!teachers || teachers.length === 0) {
-          throw new NotFoundException('Teachers not found');
-        }
-
+        if (!teachers || teachers.length === 0) throw new NotFoundException('Teachers not found');
         dailyScheduleFound.teachers = teachers;
       }
 
-      if (updateData.studentIds) {
-        const students = await this.studentService.findByIds(updateData.studentIds);
+      const dayToUse = updateData.day ?? dailyScheduleFound.day;
+      const dayIndexMap: Record<string, number> = {
+        Monday: 0,
+        Tuesday: 1,
+        Wednesday: 2,
+        Thursday: 3,
+        Friday: 4,
+        Saturday: 5,
+        Sunday: 6,
+      };
+      const dayIndex = dayIndexMap[dayToUse];
 
-        if (!students || students.length === 0) {
-          throw new NotFoundException('Students not found');
-        }
+      const baseDate = new Date(dailyScheduleFound.planning.startDate);
+      const scheduleDate = addDays(baseDate, dayIndex);
+      scheduleDate.setHours(0, 0, 0, 0);
+
+      if (updateData.studentIds) {
+        const allStudents = await this.studentService.findByIds(updateData.studentIds);
+        if (!allStudents || allStudents.length === 0) throw new NotFoundException('Students not found');
+
+        const students = allStudents.filter((s) => {
+          if (!s.startDateOfClasses) return true;
+          const sd = new Date(s.startDateOfClasses as any);
+          sd.setHours(0, 0, 0, 0);
+          return sd.getTime() <= scheduleDate.getTime();
+        });
 
         dailyScheduleFound.students = students;
+      } else if (updateData.day || updateData.planningId) {
+        dailyScheduleFound.students = (dailyScheduleFound.students ?? []).filter((s) => {
+          if (!s.startDateOfClasses) return true;
+          const sd = new Date(s.startDateOfClasses as any);
+          sd.setHours(0, 0, 0, 0);
+          return sd.getTime() <= scheduleDate.getTime();
+        });
       }
 
       if (updateData.day) {
-        const dayIndex = {
-          Monday: 0,
-          Tuesday: 1,
-          Wednesday: 2,
-          Thursday: 3,
-          Friday: 4,
-          Saturday: 5,
-          Sunday: 6,
-        }[updateData.day];
-
-        const baseDate = new Date(dailyScheduleFound.planning.startDate);
-
-        const date = addDays(baseDate, dayIndex);
-
-        dailyScheduleFound.date = format(date, 'yyyy-MM-dd') as any;
+        dailyScheduleFound.day = updateData.day;
+        dailyScheduleFound.date = format(scheduleDate, 'yyyy-MM-dd') as any;
       }
 
       if (updateData.notes) {
@@ -181,7 +174,7 @@ export class DailyScheduleService {
       for (const teacher of savedSchedule.teachers) {
         this.notificationService.create({
           title: 'Daily Schedule Updated',
-          message: `Your daily schedule has been updated for ${updateData.day} in ${savedSchedule.planning.class.name}`,
+          message: `Your daily schedule has been updated for ${dayToUse} in ${savedSchedule.planning.class.name}`,
           userId: teacher.user.id,
         });
       }

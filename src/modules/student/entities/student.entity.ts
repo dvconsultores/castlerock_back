@@ -51,6 +51,9 @@ export class StudentEntity {
   @Column({ type: 'date', name: 'start_date_of_classes', nullable: true })
   startDateOfClasses: Date;
 
+  @Column({ type: 'date', name: 'end_date_of_classes', nullable: true })
+  endDateOfClasses: Date;
+
   @Column('simple-array', { name: 'days_enrolled' })
   @IsArray()
   @IsEnum(WeekDayEnum, { each: true })

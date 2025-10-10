@@ -58,11 +58,22 @@ export class DailyScheduleService {
       scheduleDate.setHours(0, 0, 0, 0);
 
       const allStudents = await this.studentService.findByIds(dto.studentIds);
+
       const students = allStudents.filter((s) => {
-        if (!s.startDateOfClasses) return true;
-        const sd = new Date(s.startDateOfClasses as any);
-        sd.setHours(0, 0, 0, 0);
-        return sd.getTime() <= scheduleDate.getTime();
+        const hasStart = !!s.startDateOfClasses;
+        const hasEnd = !!s.endDateOfClasses;
+
+        if (!hasStart && !hasEnd) return true;
+
+        const sd = hasStart ? new Date(s.startDateOfClasses as any) : null;
+        const ed = hasEnd ? new Date(s.endDateOfClasses as any) : null;
+        if (sd) sd.setHours(0, 0, 0, 0);
+        if (ed) ed.setHours(0, 0, 0, 0);
+
+        const afterStart = !sd || scheduleDate.getTime() >= sd.getTime();
+        const beforeEnd = !ed || scheduleDate.getTime() <= ed.getTime();
+
+        return afterStart && beforeEnd;
       });
 
       const dailyScheduleEntity = plainToClass(DailyScheduleEntity, {
@@ -144,19 +155,39 @@ export class DailyScheduleService {
         if (!allStudents || allStudents.length === 0) throw new NotFoundException('Students not found');
 
         const students = allStudents.filter((s) => {
-          if (!s.startDateOfClasses) return true;
-          const sd = new Date(s.startDateOfClasses as any);
-          sd.setHours(0, 0, 0, 0);
-          return sd.getTime() <= scheduleDate.getTime();
+          const hasStart = !!s.startDateOfClasses;
+          const hasEnd = !!s.endDateOfClasses;
+
+          if (!hasStart && !hasEnd) return true;
+
+          const sd = hasStart ? new Date(s.startDateOfClasses as any) : null;
+          const ed = hasEnd ? new Date(s.endDateOfClasses as any) : null;
+          if (sd) sd.setHours(0, 0, 0, 0);
+          if (ed) ed.setHours(0, 0, 0, 0);
+
+          const afterStart = !sd || scheduleDate.getTime() >= sd.getTime();
+          const beforeEnd = !ed || scheduleDate.getTime() <= ed.getTime();
+
+          return afterStart && beforeEnd;
         });
 
         dailyScheduleFound.students = students;
       } else if (updateData.day || updateData.planningId) {
         dailyScheduleFound.students = (dailyScheduleFound.students ?? []).filter((s) => {
-          if (!s.startDateOfClasses) return true;
-          const sd = new Date(s.startDateOfClasses as any);
-          sd.setHours(0, 0, 0, 0);
-          return sd.getTime() <= scheduleDate.getTime();
+          const hasStart = !!s.startDateOfClasses;
+          const hasEnd = !!s.endDateOfClasses;
+
+          if (!hasStart && !hasEnd) return true;
+
+          const sd = hasStart ? new Date(s.startDateOfClasses as any) : null;
+          const ed = hasEnd ? new Date(s.endDateOfClasses as any) : null;
+          if (sd) sd.setHours(0, 0, 0, 0);
+          if (ed) ed.setHours(0, 0, 0, 0);
+
+          const afterStart = !sd || scheduleDate.getTime() >= sd.getTime();
+          const beforeEnd = !ed || scheduleDate.getTime() <= ed.getTime();
+
+          return afterStart && beforeEnd;
         });
       }
 

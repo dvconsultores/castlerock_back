@@ -359,14 +359,8 @@ export class StudentService {
           ? new Date(new Date(student.startDateOfClasses as any).setHours(0, 0, 0, 0))
           : today;
 
-        // Función reutilizable para construir la condición de fechas
-        const buildDateCondition = () => {
-          if (student.endDateOfClasses) {
-            const endDate = new Date(new Date(student.endDateOfClasses as any).setHours(0, 0, 0, 0));
-            return { date: Between(startFrom, endDate) };
-          }
-          return { date: MoreThanOrEqual(startFrom) };
-        };
+        // El filtro ahora solo depende de startDateOfClasses
+        const dateCondition = { date: MoreThanOrEqual(startFrom) };
 
         const addPromises: Promise<any>[] = [];
 
@@ -379,7 +373,7 @@ export class StudentService {
                 classType: ClassType.ENROLLED,
               },
             },
-            ...buildDateCondition(),
+            ...dateCondition,
           };
 
           const futureSchedulesEnrolled = await this.dailyScheduleRepository.find({
@@ -391,10 +385,16 @@ export class StudentService {
             const isEnrolled = sched.students.some((s) => s.id === studentId);
             const shouldBeEnrolled = student.daysEnrolled.includes(sched.day);
 
-            if (!isEnrolled && shouldBeEnrolled) {
+            // Si tiene fecha de fin y la clase es posterior → debe eliminarse
+            const shouldBeRemovedByEndDate =
+              student.endDateOfClasses &&
+              new Date(sched.date).setHours(0, 0, 0, 0) >
+                new Date(student.endDateOfClasses as any).setHours(0, 0, 0, 0);
+
+            if (!isEnrolled && shouldBeEnrolled && !shouldBeRemovedByEndDate) {
               sched.students.push(student);
               addPromises.push(this.dailyScheduleRepository.save(sched));
-            } else if (isEnrolled && !shouldBeEnrolled) {
+            } else if (isEnrolled && (!shouldBeEnrolled || shouldBeRemovedByEndDate)) {
               sched.students = sched.students.filter((s) => s.id !== studentId);
               addPromises.push(this.dailyScheduleRepository.save(sched));
             }
@@ -410,7 +410,7 @@ export class StudentService {
                 classType: ClassType.AFTER_SCHOOL,
               },
             },
-            ...buildDateCondition(),
+            ...dateCondition,
           };
 
           const futureSchedulesAfterSchool = await this.dailyScheduleRepository.find({
@@ -421,11 +421,15 @@ export class StudentService {
           for (const sched of futureSchedulesAfterSchool) {
             const isEnrolled = sched.students.some((s) => s.id === studentId);
             const shouldBeEnrolled = student.afterSchoolDays.includes(sched.day);
+            const shouldBeRemovedByEndDate =
+              student.endDateOfClasses &&
+              new Date(sched.date).setHours(0, 0, 0, 0) >
+                new Date(student.endDateOfClasses as any).setHours(0, 0, 0, 0);
 
-            if (!isEnrolled && shouldBeEnrolled) {
+            if (!isEnrolled && shouldBeEnrolled && !shouldBeRemovedByEndDate) {
               sched.students.push(student);
               addPromises.push(this.dailyScheduleRepository.save(sched));
-            } else if (isEnrolled && !shouldBeEnrolled) {
+            } else if (isEnrolled && (!shouldBeEnrolled || shouldBeRemovedByEndDate)) {
               sched.students = sched.students.filter((s) => s.id !== studentId);
               addPromises.push(this.dailyScheduleRepository.save(sched));
             }
@@ -441,7 +445,7 @@ export class StudentService {
                 classType: ClassType.BEFORE_SCHOOL,
               },
             },
-            ...buildDateCondition(),
+            ...dateCondition,
           };
 
           const futureSchedulesBeforeSchool = await this.dailyScheduleRepository.find({
@@ -452,11 +456,15 @@ export class StudentService {
           for (const sched of futureSchedulesBeforeSchool) {
             const isEnrolled = sched.students.some((s) => s.id === studentId);
             const shouldBeEnrolled = student.beforeSchoolDays.includes(sched.day);
+            const shouldBeRemovedByEndDate =
+              student.endDateOfClasses &&
+              new Date(sched.date).setHours(0, 0, 0, 0) >
+                new Date(student.endDateOfClasses as any).setHours(0, 0, 0, 0);
 
-            if (!isEnrolled && shouldBeEnrolled) {
+            if (!isEnrolled && shouldBeEnrolled && !shouldBeRemovedByEndDate) {
               sched.students.push(student);
               addPromises.push(this.dailyScheduleRepository.save(sched));
-            } else if (isEnrolled && !shouldBeEnrolled) {
+            } else if (isEnrolled && (!shouldBeEnrolled || shouldBeRemovedByEndDate)) {
               sched.students = sched.students.filter((s) => s.id !== studentId);
               addPromises.push(this.dailyScheduleRepository.save(sched));
             }

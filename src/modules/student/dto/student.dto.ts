@@ -69,6 +69,12 @@ export class CreateStudentDto {
   @Type(() => Date)
   startDateOfClasses?: Date;
 
+  @ApiPropertyOptional({ type: String, format: 'date' })
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  endDateOfClasses?: Date;
+
   @ApiProperty({ type: [String], enum: WeekDayEnum, isArray: true })
   @IsOptional()
   // @ToEmptyArray()

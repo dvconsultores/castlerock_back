@@ -24,6 +24,7 @@ import { AdditionalProgramModule } from './modules/additional-program/additional
 import { StorageModule } from './shared/storage/storage.module';
 import { DailyScheduleModule } from './modules/daily-schedule/daily-schedule.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
   imports: [
@@ -54,6 +55,8 @@ import { AttendanceModule } from './modules/attendance/attendance.module';
     StorageModule,
     DailyScheduleModule,
     AttendanceModule,
+    ScheduleModule.forRoot(),
+    TasksModule,
   ],
   controllers: [AppController],
   providers: [

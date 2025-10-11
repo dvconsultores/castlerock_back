@@ -38,6 +38,12 @@ export class CreateDailyScheduleDto {
   studentIds: number[];
 
   @ApiProperty()
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @Type(() => Number)
+  transitionStudentIds: number[];
+
+  @ApiProperty()
   @IsOptional()
   @IsString()
   notes?: string;

@@ -99,15 +99,17 @@ export class PlanningService {
         continue;
       }
 
-      const [teachers, students] = await Promise.all([
+      const [teachers, students, studentsTransition] = await Promise.all([
         this.teacherService.findByClassId(plan.class.id),
         this.studentService.findByClassIdAndDayEnrolled(plan.class.id, day, plan.class.classType),
+        this.studentService.findByClassIdAndDayEnrolledTransition(plan.class.id, day, plan.class.classType),
       ]);
 
       console.log(`Found ${teachers.length} teachers and ${students.length} students for day: ${day}`);
 
       const teacherIds = teachers.map((t) => t.id);
       const studentIds = students.map((s) => s.id);
+      const transitionStudentIds = studentsTransition.map((s) => s.id);
 
       await this.dailyScheduleService.create(
         {
@@ -115,6 +117,7 @@ export class PlanningService {
           day,
           teacherIds,
           studentIds,
+          transitionStudentIds,
         },
         userId,
       );

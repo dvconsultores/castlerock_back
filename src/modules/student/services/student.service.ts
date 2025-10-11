@@ -322,6 +322,7 @@ export class StudentService {
       .leftJoinAndSelect('student.contacts', 'contacts')
       .leftJoinAndSelect('student.additionalPrograms', 'additionalPrograms')
       .leftJoinAndSelect('student.classes', 'classes')
+      .leftJoinAndSelect('student.classesTransition', 'classesTransition')
       .leftJoinAndSelect('classes.campus', 'classCampus')
       .select([
         'student',
@@ -330,6 +331,7 @@ export class StudentService {
         'contacts',
         'additionalPrograms',
         'classes',
+        'classesTransition',
         'classCampus.id',
         'classCampus.name',
       ]);
@@ -365,6 +367,7 @@ export class StudentService {
       .leftJoinAndSelect('student.contacts', 'contacts')
       .leftJoinAndSelect('student.additionalPrograms', 'additionalPrograms')
       .leftJoinAndSelect('student.classes', 'classes')
+      .leftJoinAndSelect('student.classesTransition', 'classesTransition')
       .leftJoinAndSelect('classes.campus', 'classCampus')
       .select([
         'student',
@@ -373,6 +376,7 @@ export class StudentService {
         'contacts',
         'additionalPrograms',
         'classes',
+        'classesTransition',
         'classCampus.id',
         'classCampus.name',
       ])
@@ -845,7 +849,7 @@ export class StudentService {
 
     const students = await this.repository
       .createQueryBuilder('student')
-      .innerJoin('student.classes', 'class', 'class.id = :classId', { classId })
+      .innerJoin('student.classes_transition', 'class', 'class.id = :classId', { classId })
       .andWhere(`:day = ANY(string_to_array(${column}, ','))`, { day })
       .getMany();
 

@@ -105,7 +105,7 @@ export class StudentEntity {
   @IsEnum(WeekDayEnum, { each: true })
   afterSchoolDaysTransition: WeekDayEnum[];
 
-  @ManyToMany(() => ClassEntity, (c) => c.students, { cascade: true })
+  @ManyToMany(() => ClassEntity, (c) => c.studentsTransition, { cascade: true })
   @JoinTable({
     name: 'students_classes_transition_classes',
     joinColumn: {

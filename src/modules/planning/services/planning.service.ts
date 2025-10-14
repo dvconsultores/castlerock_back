@@ -105,7 +105,9 @@ export class PlanningService {
         this.studentService.findByClassIdAndDayEnrolledTransition(plan.class.id, day, plan.class.classType),
       ]);
 
-      console.log(`Found ${teachers.length} teachers and ${students.length} students for day: ${day}`);
+      console.log(
+        `Found ${teachers.length} teachers and ${students.length} students and ${studentsTransition.length} transition students for day: ${day}`,
+      );
 
       const teacherIds = teachers.map((t) => t.id);
       const studentIds = students.map((s) => s.id);

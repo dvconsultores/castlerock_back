@@ -849,7 +849,7 @@ export class StudentService {
 
     const students = await this.repository
       .createQueryBuilder('student')
-      .innerJoin('student.classes_transition', 'class', 'class.id = :classId', { classId })
+      .innerJoin('student.classesTransition', 'class', 'class.id = :classId', { classId })
       .andWhere(`:day = ANY(string_to_array(${column}, ','))`, { day })
       .getMany();
 

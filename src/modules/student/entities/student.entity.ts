@@ -107,7 +107,7 @@ export class StudentEntity {
 
   @ManyToMany(() => ClassEntity, (c) => c.students, { cascade: true })
   @JoinTable({
-    name: 'students_classes_classes_transition',
+    name: 'students_classes_transition_classes',
     joinColumn: {
       name: 'studentsId',
       referencedColumnName: 'id',

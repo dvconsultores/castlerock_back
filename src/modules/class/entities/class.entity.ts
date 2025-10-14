@@ -44,6 +44,9 @@ export class ClassEntity {
   @ManyToMany(() => StudentEntity, (student) => student.classes)
   students: StudentEntity[];
 
+  @ManyToMany(() => StudentEntity, (student) => student.classesTransition)
+  studentsTransition: StudentEntity[];
+
   @Column({
     name: 'class_type',
     default: ClassType.ENROLLED,

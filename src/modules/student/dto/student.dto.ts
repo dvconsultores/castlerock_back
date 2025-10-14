@@ -65,9 +65,14 @@ export class CreateStudentDto {
 
   @ApiPropertyOptional({ type: String, format: 'date' })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'null' || value === null || value === '') {
+      return null;
+    }
+    return new Date(value);
+  })
   @IsDate()
-  @Type(() => Date)
-  endDateOfClasses?: any;
+  endDateOfClasses?: Date | null;
 
   @ApiPropertyOptional({ type: String, format: 'date' })
   @IsOptional()
@@ -125,7 +130,7 @@ export class CreateStudentDto {
   @IsOptional()
   // @ToEmptyArray()
   @ToArray()
-  daysEnrolledTransition: WeekDayEnum[];
+  daysEnrolledTransition?: WeekDayEnum[];
 
   @ApiPropertyOptional({ type: [String], enum: WeekDayEnum, isArray: true })
   @IsOptional()

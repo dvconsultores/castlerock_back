@@ -416,11 +416,7 @@ export class StudentService {
         updateData.image = imageUrl;
       }
 
-      if (
-        updateData.endDateOfClasses === null ||
-        updateData.endDateOfClasses === '' ||
-        updateData.endDateOfClasses === 'null'
-      ) {
+      if (updateData.endDateOfClasses === null) {
         updateData.endDateOfClasses = null as any;
       }
 

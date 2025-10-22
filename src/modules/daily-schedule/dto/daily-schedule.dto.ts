@@ -38,10 +38,11 @@ export class CreateDailyScheduleDto {
   studentIds: number[];
 
   @ApiProperty()
+  @IsOptional()
   @IsArray()
   @IsNumber({}, { each: true })
   @Type(() => Number)
-  transitionStudentIds: number[];
+  transitionStudentIds?: number[];
 
   @ApiProperty()
   @IsOptional()

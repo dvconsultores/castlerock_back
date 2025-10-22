@@ -48,6 +48,7 @@ export class DailyScheduleService {
       }
 
       const planning = await this.planningService.findOneWithRelations(dto.planningId, ['class']);
+
       if (!planning) throw new NotFoundException('Planning not found');
 
       const teachers = await this.teacherService.findByIds(dto.teacherIds);

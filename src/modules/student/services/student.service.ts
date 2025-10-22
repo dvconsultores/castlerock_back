@@ -324,6 +324,7 @@ export class StudentService {
       .leftJoinAndSelect('student.classes', 'classes')
       .leftJoinAndSelect('student.classesTransition', 'classesTransition')
       .leftJoinAndSelect('classes.campus', 'classCampus')
+      .leftJoinAndSelect('classesTransition.campus', 'classCampusTransition')
       .select([
         'student',
         'campus.id',
@@ -334,6 +335,8 @@ export class StudentService {
         'classesTransition',
         'classCampus.id',
         'classCampus.name',
+        'classCampusTransition.id',
+        'classCampusTransition.name',
       ]);
 
     if (query.campusId) {
@@ -369,6 +372,7 @@ export class StudentService {
       .leftJoinAndSelect('student.classes', 'classes')
       .leftJoinAndSelect('student.classesTransition', 'classesTransition')
       .leftJoinAndSelect('classes.campus', 'classCampus')
+      .leftJoinAndSelect('classesTransition.campus', 'classCampusTransition')
       .select([
         'student',
         'campus.id',
@@ -379,6 +383,8 @@ export class StudentService {
         'classesTransition',
         'classCampus.id',
         'classCampus.name',
+        'classCampusTransition.id',
+        'classCampusTransition.name',
       ])
       .where('student.id = :id', { id })
       .getOne();

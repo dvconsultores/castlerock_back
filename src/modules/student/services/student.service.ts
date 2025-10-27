@@ -8,7 +8,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, MoreThanOrEqual, Not, Repository } from 'typeorm';
+import { Between, In, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { StudentEntity } from '../entities/student.entity';
 import { CreateStudentDto, FindStudentDtoQuery, UpdateStudentDto } from '../dto/student.dto';
 import { instanceToPlain, plainToClass } from 'class-transformer';
@@ -22,6 +22,7 @@ import { ClassService } from '../../class/services/class.service';
 import { WeekDayEnum } from '../../../shared/enums/week-day.enum';
 import { DailyScheduleEntity } from '../../daily-schedule/entities/daily-schedule.entity';
 import { ClassType } from '../../../shared/enums/class-type.enum';
+import { ClassEntity } from '../../class/entities/class.entity';
 
 @Injectable()
 export class StudentService {
@@ -73,10 +74,13 @@ export class StudentService {
 
       const classes = await this.classService.findByIds(dto.classIds);
 
+      const classesTransition = await this.classService.findByIds(dto.classIdsTransition);
+
       const newEntity = plainToClass(StudentEntity, {
         ...dto,
         classes,
         additionalPrograms,
+        classesTransition,
       });
 
       const student = await this.repository.save(newEntity);
@@ -90,17 +94,32 @@ export class StudentService {
         ? new Date(new Date(student.startDateOfClasses as any).setHours(0, 0, 0, 0))
         : today;
 
-      const futureSchedulesEnrolled = await this.dailyScheduleRepository.find({
-        where: {
-          planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.ENROLLED } },
-          date: MoreThanOrEqual(startFrom),
-          day: In(dto.daysEnrolled),
+      const buildDateCondition = (baseDays: string[]) => ({
+        date: MoreThanOrEqual(startFrom),
+        day: In(baseDays),
+      });
+
+      // -------------------- ENROLLED --------------------
+      const whereEnrolled: any = {
+        planning: {
+          class: {
+            id: In(classes.map((c) => c.id)),
+            classType: ClassType.ENROLLED,
+          },
         },
+        ...buildDateCondition(dto.daysEnrolled),
+      };
+
+      const futureSchedulesEnrolled = await this.dailyScheduleRepository.find({
+        where: whereEnrolled,
         relations: ['students'],
       });
 
       const savePromisesEnrolled = futureSchedulesEnrolled
-        .filter((sched) => !sched.students.some((t) => t.id === studentId))
+        .filter((sched) => {
+          // No está inscrito y la fecha no supera su endDateOfClasses
+          return !sched.students.some((t) => t.id === studentId) && !this.isOutsideActiveRange(student, sched.date);
+        })
         .map((sched) => {
           sched.students.push(student);
           return this.dailyScheduleRepository.save(sched);
@@ -108,18 +127,27 @@ export class StudentService {
 
       await Promise.all(savePromisesEnrolled);
 
+      // -------------------- AFTER SCHOOL --------------------
       if (dto.afterSchoolDays) {
-        const futureSchedulesAfterSchool = await this.dailyScheduleRepository.find({
-          where: {
-            planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.AFTER_SCHOOL } },
-            date: MoreThanOrEqual(startFrom),
-            day: In(dto.afterSchoolDays),
+        const whereAfterSchool: any = {
+          planning: {
+            class: {
+              id: In(classes.map((c) => c.id)),
+              classType: ClassType.AFTER_SCHOOL,
+            },
           },
+          ...buildDateCondition(dto.afterSchoolDays),
+        };
+
+        const futureSchedulesAfterSchool = await this.dailyScheduleRepository.find({
+          where: whereAfterSchool,
           relations: ['students'],
         });
 
         const savePromisesAfterSchool = futureSchedulesAfterSchool
-          .filter((sched) => !sched.students.some((t) => t.id === studentId))
+          .filter((sched) => {
+            return !sched.students.some((t) => t.id === studentId) && !this.isOutsideActiveRange(student, sched.date);
+          })
           .map((sched) => {
             sched.students.push(student);
             return this.dailyScheduleRepository.save(sched);
@@ -128,18 +156,27 @@ export class StudentService {
         await Promise.all(savePromisesAfterSchool);
       }
 
+      // -------------------- BEFORE SCHOOL --------------------
       if (dto.beforeSchoolDays) {
-        const futureSchedulesBeforeSchool = await this.dailyScheduleRepository.find({
-          where: {
-            planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.BEFORE_SCHOOL } },
-            date: MoreThanOrEqual(startFrom),
-            day: In(dto.beforeSchoolDays),
+        const whereBeforeSchool: any = {
+          planning: {
+            class: {
+              id: In(classes.map((c) => c.id)),
+              classType: ClassType.BEFORE_SCHOOL,
+            },
           },
+          ...buildDateCondition(dto.beforeSchoolDays),
+        };
+
+        const futureSchedulesBeforeSchool = await this.dailyScheduleRepository.find({
+          where: whereBeforeSchool,
           relations: ['students'],
         });
 
         const savePromisesBeforeSchool = futureSchedulesBeforeSchool
-          .filter((sched) => !sched.students.some((t) => t.id === studentId))
+          .filter((sched) => {
+            return !sched.students.some((t) => t.id === studentId) && !this.isOutsideActiveRange(student, sched.date);
+          })
           .map((sched) => {
             sched.students.push(student);
             return this.dailyScheduleRepository.save(sched);
@@ -148,11 +185,135 @@ export class StudentService {
         await Promise.all(savePromisesBeforeSchool);
       }
 
+      await this.handleStudentScheduleTransition(student);
+
       return instanceToPlain(student);
     } catch (error) {
       throw new ExceptionHandler(error);
     }
   }
+
+  async handleStudentScheduleTransition(student: StudentEntity): Promise<void> {
+    if (!student.startDateOfClassesTransition || !student.daysEnrolledTransition) {
+      return;
+    }
+
+    const startFrom = new Date(new Date(student.startDateOfClassesTransition).setHours(0, 0, 0, 0));
+
+    // -------------------- ENROLLED --------------------
+    const whereEnrolled: any = {
+      planning: {
+        class: {
+          id: In(student.classesTransition.map((c) => c.id)),
+          classType: ClassType.ENROLLED,
+        },
+      },
+      date: MoreThanOrEqual(startFrom),
+      day: In(student.daysEnrolledTransition),
+    };
+
+    const futureSchedulesEnrolled = await this.dailyScheduleRepository.find({
+      where: whereEnrolled,
+      relations: ['students'],
+    });
+
+    const savePromisesEnrolled = futureSchedulesEnrolled
+      .filter((sched) => {
+        return !sched.students.some((t) => t.id === student.id) && !this.isAfterEndDate(student, sched.date);
+      })
+      .map((sched) => {
+        sched.students.push(student);
+        return this.dailyScheduleRepository.save(sched);
+      });
+
+    await Promise.all(savePromisesEnrolled);
+
+    // -------------------- AFTER SCHOOL --------------------
+    if (student.afterSchoolDaysTransition) {
+      const whereAfterSchool: any = {
+        planning: {
+          class: {
+            id: In(student.classesTransition.map((c) => c.id)),
+            classType: ClassType.AFTER_SCHOOL,
+          },
+        },
+        date: MoreThanOrEqual(startFrom),
+        day: In(student.afterSchoolDaysTransition),
+      };
+
+      const futureSchedulesAfterSchool = await this.dailyScheduleRepository.find({
+        where: whereAfterSchool,
+        relations: ['students'],
+      });
+
+      const savePromisesAfterSchool = futureSchedulesAfterSchool
+        .filter((sched) => {
+          return !sched.students.some((t) => t.id === student.id) && !this.isAfterEndDate(student, sched.date);
+        })
+        .map((sched) => {
+          sched.students.push(student);
+          return this.dailyScheduleRepository.save(sched);
+        });
+
+      await Promise.all(savePromisesAfterSchool);
+    }
+
+    // -------------------- BEFORE SCHOOL --------------------
+    if (student.beforeSchoolDaysTransition) {
+      const whereBeforeSchool: any = {
+        planning: {
+          class: {
+            id: In(student.classesTransition.map((c) => c.id)),
+            classType: ClassType.BEFORE_SCHOOL,
+          },
+        },
+        date: MoreThanOrEqual(startFrom),
+        day: In(student.beforeSchoolDaysTransition),
+      };
+
+      const futureSchedulesBeforeSchool = await this.dailyScheduleRepository.find({
+        where: whereBeforeSchool,
+        relations: ['students'],
+      });
+
+      const savePromisesBeforeSchool = futureSchedulesBeforeSchool
+        .filter((sched) => {
+          return !sched.students.some((t) => t.id === student.id) && !this.isAfterEndDate(student, sched.date);
+        })
+        .map((sched) => {
+          sched.students.push(student);
+          return this.dailyScheduleRepository.save(sched);
+        });
+
+      await Promise.all(savePromisesBeforeSchool);
+    }
+  }
+
+  private isAfterEndDate = (student: StudentEntity, schedDate: Date): boolean => {
+    if (!student.endDateOfClasses) return false;
+    const endDate = new Date(student.endDateOfClasses as any);
+    endDate.setHours(0, 0, 0, 0);
+    return schedDate.getTime() > endDate.getTime();
+  };
+
+  private isOutsideActiveRange = (student: StudentEntity, schedDate: Date): boolean => {
+    const date = new Date(schedDate);
+    date.setHours(0, 0, 0, 0);
+
+    if (student.endDateOfClasses) {
+      const endDate = new Date(student.endDateOfClasses);
+      endDate.setHours(0, 0, 0, 0);
+      if (date.getTime() > endDate.getTime()) return true;
+    }
+
+    if (student.startDateOfClassesTransition) {
+      const startTransition = new Date(student.startDateOfClassesTransition);
+      startTransition.setHours(0, 0, 0, 0);
+      if (date.getTime() >= startTransition.getTime()) return true;
+    }
+
+    return false;
+  };
 
   async findByParams(query: FindStudentDtoQuery): Promise<any[]> {
     const queryBuilder = this.repository
@@ -161,7 +322,9 @@ export class StudentService {
       .leftJoinAndSelect('student.contacts', 'contacts')
       .leftJoinAndSelect('student.additionalPrograms', 'additionalPrograms')
       .leftJoinAndSelect('student.classes', 'classes')
+      .leftJoinAndSelect('student.classesTransition', 'classesTransition')
       .leftJoinAndSelect('classes.campus', 'classCampus')
+      .leftJoinAndSelect('classesTransition.campus', 'classCampusTransition')
       .select([
         'student',
         'campus.id',
@@ -169,8 +332,11 @@ export class StudentService {
         'contacts',
         'additionalPrograms',
         'classes',
+        'classesTransition',
         'classCampus.id',
         'classCampus.name',
+        'classCampusTransition.id',
+        'classCampusTransition.name',
       ]);
 
     if (query.campusId) {
@@ -183,20 +349,15 @@ export class StudentService {
       });
     }
 
-    // if (query.program) {
-    //   const ageInMonthsExpr = `
-    //     (EXTRACT(YEAR FROM AGE(NOW(), student.dateOfBirth)) * 12 +
-    //     EXTRACT(MONTH FROM AGE(NOW(), student.dateOfBirth)))
-    //   `;
+    if (query.endDateOrder) {
+      queryBuilder.andWhere('student.endDateOfClasses IS NOT NULL');
+      queryBuilder.addOrderBy('student.endDateOfClasses', query.endDateOrder);
+    }
 
-    //   queryBuilder.addSelect(ageInMonthsExpr, 'student_age_in_months');
-
-    //   if (query.program === ProgramType.TODDLER) {
-    //     queryBuilder.andWhere(`${ageInMonthsExpr} > 24`);
-    //   } else if (query.program === ProgramType.PRIMARY) {
-    //     queryBuilder.andWhere(`${ageInMonthsExpr} <= 24`);
-    //   }
-    // }
+    if (query.transitionStartOrder) {
+      queryBuilder.andWhere('student.startDateOfClassesTransition IS NOT NULL');
+      queryBuilder.addOrderBy('student.startDateOfClassesTransition', query.transitionStartOrder);
+    }
 
     const students = await queryBuilder.getMany();
     return students.map((student) => instanceToPlain(student));
@@ -209,7 +370,9 @@ export class StudentService {
       .leftJoinAndSelect('student.contacts', 'contacts')
       .leftJoinAndSelect('student.additionalPrograms', 'additionalPrograms')
       .leftJoinAndSelect('student.classes', 'classes')
+      .leftJoinAndSelect('student.classesTransition', 'classesTransition')
       .leftJoinAndSelect('classes.campus', 'classCampus')
+      .leftJoinAndSelect('classesTransition.campus', 'classCampusTransition')
       .select([
         'student',
         'campus.id',
@@ -217,8 +380,11 @@ export class StudentService {
         'contacts',
         'additionalPrograms',
         'classes',
+        'classesTransition',
         'classCampus.id',
         'classCampus.name',
+        'classCampusTransition.id',
+        'classCampusTransition.name',
       ])
       .where('student.id = :id', { id })
       .getOne();
@@ -256,7 +422,12 @@ export class StudentService {
         updateData.image = imageUrl;
       }
 
+      if (updateData.endDateOfClasses === null) {
+        updateData.endDateOfClasses = null as any;
+      }
+
       const classesIds = student.classes || [];
+      const classesTransitionIds = student.classesTransition || [];
 
       const { contacts, additionalProgramIds, ...rest } = updateData;
       Object.assign(student, rest);
@@ -322,84 +493,103 @@ export class StudentService {
           ? new Date(new Date(student.startDateOfClasses as any).setHours(0, 0, 0, 0))
           : today;
 
+        // El filtro ahora solo depende de startDateOfClasses
+        const dateCondition = { date: MoreThanOrEqual(startFrom) };
+
         const addPromises: Promise<any>[] = [];
 
+        // -------------------- ENROLLED --------------------
         if (Array.isArray(updateData.daysEnrolled)) {
-          const futureSchedulesEnrolled = await this.dailyScheduleRepository.find({
-            where: {
-              planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.ENROLLED } },
-              date: MoreThanOrEqual(startFrom),
+          const whereEnrolled: any = {
+            planning: {
+              class: {
+                id: In(classes.map((c) => c.id)),
+                classType: ClassType.ENROLLED,
+              },
             },
+            ...dateCondition,
+          };
+
+          const futureSchedulesEnrolled = await this.dailyScheduleRepository.find({
+            where: whereEnrolled,
             relations: ['students'],
           });
 
           for (const sched of futureSchedulesEnrolled) {
-            if (!sched.students.find((s) => s.id === studentId)) {
-              if (student.daysEnrolled.includes(sched.day)) {
-                sched.students.push(student);
-                addPromises.push(this.dailyScheduleRepository.save(sched));
-              }
-            } else {
-              if (!student.daysEnrolled.includes(sched.day)) {
-                sched.students = sched.students.filter((s) => s.id !== studentId);
-                addPromises.push(this.dailyScheduleRepository.save(sched));
-              }
+            const isEnrolled = sched.students.some((s) => s.id === studentId);
+            const shouldBeEnrolled = student.daysEnrolled.includes(sched.day);
+            const shouldBeRemoved = this.isOutsideActiveRange(student, sched.date);
+
+            if (!isEnrolled && shouldBeEnrolled && !shouldBeRemoved) {
+              sched.students.push(student);
+              addPromises.push(this.dailyScheduleRepository.save(sched));
+            } else if (isEnrolled && (!shouldBeEnrolled || shouldBeRemoved)) {
+              sched.students = sched.students.filter((s) => s.id !== studentId);
+              addPromises.push(this.dailyScheduleRepository.save(sched));
             }
           }
         }
 
+        // -------------------- AFTER SCHOOL --------------------
         if (Array.isArray(updateData.afterSchoolDays)) {
-          const futureSchedulesAfterSchool = await this.dailyScheduleRepository.find({
-            where: {
-              planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.AFTER_SCHOOL } },
-              date: MoreThanOrEqual(startFrom),
+          const whereAfterSchool: any = {
+            planning: {
+              class: {
+                id: In(classes.map((c) => c.id)),
+                classType: ClassType.AFTER_SCHOOL,
+              },
             },
+            ...dateCondition,
+          };
+
+          const futureSchedulesAfterSchool = await this.dailyScheduleRepository.find({
+            where: whereAfterSchool,
             relations: ['students'],
           });
 
           for (const sched of futureSchedulesAfterSchool) {
-            if (!sched.students.find((s) => s.id === studentId)) {
-              if (student.afterSchoolDays.includes(sched.day)) {
-                sched.students.push(student);
-                addPromises.push(this.dailyScheduleRepository.save(sched));
-              }
-            } else {
-              if (!student.afterSchoolDays.includes(sched.day)) {
-                sched.students = sched.students.filter((s) => s.id !== studentId);
-                addPromises.push(this.dailyScheduleRepository.save(sched));
-              }
+            const isEnrolled = sched.students.some((s) => s.id === studentId);
+            const shouldBeEnrolled = student.afterSchoolDays.includes(sched.day);
+            const shouldBeRemoved = this.isOutsideActiveRange(student, sched.date);
+
+            if (!isEnrolled && shouldBeEnrolled && !shouldBeRemoved) {
+              sched.students.push(student);
+              addPromises.push(this.dailyScheduleRepository.save(sched));
+            } else if (isEnrolled && (!shouldBeEnrolled || shouldBeRemoved)) {
+              sched.students = sched.students.filter((s) => s.id !== studentId);
+              addPromises.push(this.dailyScheduleRepository.save(sched));
             }
           }
         }
 
-        console.log('Updating before school days', updateData.beforeSchoolDays);
+        // -------------------- BEFORE SCHOOL --------------------
         if (Array.isArray(updateData.beforeSchoolDays)) {
-          const futureSchedulesBeforeSchool = await this.dailyScheduleRepository.find({
-            where: {
-              planning: { class: { id: In(classes.map((c) => c.id)), classType: ClassType.BEFORE_SCHOOL } },
-              date: MoreThanOrEqual(startFrom),
+          const whereBeforeSchool: any = {
+            planning: {
+              class: {
+                id: In(classes.map((c) => c.id)),
+                classType: ClassType.BEFORE_SCHOOL,
+              },
             },
+            ...dateCondition,
+          };
+
+          const futureSchedulesBeforeSchool = await this.dailyScheduleRepository.find({
+            where: whereBeforeSchool,
             relations: ['students'],
           });
 
-          console.log('Future schedules before school:', futureSchedulesBeforeSchool);
-
           for (const sched of futureSchedulesBeforeSchool) {
-            if (!sched.students.find((s) => s.id === studentId)) {
-              console.log('sched.students', sched.students);
-              console.log('Adding student to schedule:', sched.id, 'for day:', sched.day, 'date:', sched.date);
-              if (student.beforeSchoolDays.includes(sched.day)) {
-                sched.students.push(student);
-                addPromises.push(this.dailyScheduleRepository.save(sched));
-              }
-            } else {
-              console.log(student.beforeSchoolDays, sched.day, sched.date);
+            const isEnrolled = sched.students.some((s) => s.id === studentId);
+            const shouldBeEnrolled = student.beforeSchoolDays.includes(sched.day);
+            const shouldBeRemoved = this.isOutsideActiveRange(student, sched.date);
 
-              if (!student.beforeSchoolDays.includes(sched.day)) {
-                console.log('Removing student from schedule:', sched.id, 'for day:', sched.day, 'date:', sched.date);
-                sched.students = sched.students.filter((s) => s.id !== studentId);
-                addPromises.push(this.dailyScheduleRepository.save(sched));
-              }
+            if (!isEnrolled && shouldBeEnrolled && !shouldBeRemoved) {
+              sched.students.push(student);
+              addPromises.push(this.dailyScheduleRepository.save(sched));
+            } else if (isEnrolled && (!shouldBeEnrolled || shouldBeRemoved)) {
+              sched.students = sched.students.filter((s) => s.id !== studentId);
+              addPromises.push(this.dailyScheduleRepository.save(sched));
             }
           }
         }
@@ -426,6 +616,19 @@ export class StudentService {
         student.classes = classes;
       }
 
+      if (
+        (updateData.classIdsTransition !== undefined && updateData.classIdsTransition.length >= 0) ||
+        classesTransitionIds.length > 0
+      ) {
+        const classesTransition = updateData.classIdsTransition
+          ? await this.classService.findByIds(updateData.classIdsTransition)
+          : classesTransitionIds;
+
+        await this.handleUpdateStudentScheduleTransition(student, classesTransition, updateData);
+
+        student.classesTransition = classesTransition;
+      }
+
       console.dir(student, { depth: null });
 
       if (!student.campus) {
@@ -437,6 +640,155 @@ export class StudentService {
       console.error('Error updating student:', error);
       throw new ExceptionHandler(error);
     }
+  }
+
+  async handleUpdateStudentScheduleTransition(
+    student: StudentEntity,
+    classesTransition: ClassEntity[],
+    updateData: any,
+  ): Promise<void> {
+    if (!student.startDateOfClassesTransition) {
+      return;
+    }
+
+    const removedClasses = student.classesTransition?.filter(
+      (oldC) => !classesTransition.some((newC) => newC.id === oldC.id),
+    );
+
+    const studentId = student.id;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const startFrom = new Date(new Date(student.startDateOfClassesTransition).setHours(0, 0, 0, 0));
+
+    const dateCondition = { date: MoreThanOrEqual(startFrom) };
+
+    const addPromises: Promise<any>[] = [];
+
+    // -------------------- ENROLLED --------------------
+    if (Array.isArray(updateData.daysEnrolledTransition)) {
+      const whereEnrolled: any = {
+        planning: {
+          class: {
+            id: In(classesTransition.map((c) => c.id)),
+            classType: ClassType.ENROLLED,
+          },
+        },
+        ...dateCondition,
+      };
+
+      const futureSchedulesEnrolled = await this.dailyScheduleRepository.find({
+        where: whereEnrolled,
+        relations: ['students'],
+      });
+
+      for (const sched of futureSchedulesEnrolled) {
+        const isEnrolled = sched.students.some((s) => s.id === studentId);
+        const shouldBeEnrolled = student.daysEnrolledTransition.includes(sched.day);
+
+        const shouldBeRemovedByEndDate =
+          student.endDateOfClasses &&
+          new Date(sched.date).setHours(0, 0, 0, 0) > new Date(student.endDateOfClasses as any).setHours(0, 0, 0, 0);
+
+        if (!isEnrolled && shouldBeEnrolled && !shouldBeRemovedByEndDate) {
+          sched.students.push(student);
+          addPromises.push(this.dailyScheduleRepository.save(sched));
+        } else if (isEnrolled && (!shouldBeEnrolled || shouldBeRemovedByEndDate)) {
+          sched.students = sched.students.filter((s) => s.id !== studentId);
+          addPromises.push(this.dailyScheduleRepository.save(sched));
+        }
+      }
+    }
+
+    // -------------------- AFTER SCHOOL --------------------
+    if (Array.isArray(updateData.afterSchoolDaysTransition)) {
+      const whereAfterSchool: any = {
+        planning: {
+          class: {
+            id: In(classesTransition.map((c) => c.id)),
+            classType: ClassType.AFTER_SCHOOL,
+          },
+        },
+        ...dateCondition,
+      };
+
+      const futureSchedulesAfterSchool = await this.dailyScheduleRepository.find({
+        where: whereAfterSchool,
+        relations: ['students'],
+      });
+
+      for (const sched of futureSchedulesAfterSchool) {
+        const isEnrolled = sched.students.some((s) => s.id === studentId);
+        const shouldBeEnrolled = student.afterSchoolDaysTransition.includes(sched.day);
+        const shouldBeRemovedByEndDate =
+          student.endDateOfClasses &&
+          new Date(sched.date).setHours(0, 0, 0, 0) > new Date(student.endDateOfClasses as any).setHours(0, 0, 0, 0);
+
+        if (!isEnrolled && shouldBeEnrolled && !shouldBeRemovedByEndDate) {
+          sched.students.push(student);
+          addPromises.push(this.dailyScheduleRepository.save(sched));
+        } else if (isEnrolled && (!shouldBeEnrolled || shouldBeRemovedByEndDate)) {
+          sched.students = sched.students.filter((s) => s.id !== studentId);
+          addPromises.push(this.dailyScheduleRepository.save(sched));
+        }
+      }
+    }
+
+    // -------------------- BEFORE SCHOOL --------------------
+    if (Array.isArray(updateData.beforeSchoolDaysTransition)) {
+      const whereBeforeSchool: any = {
+        planning: {
+          class: {
+            id: In(classesTransition.map((c) => c.id)),
+            classType: ClassType.BEFORE_SCHOOL,
+          },
+        },
+        ...dateCondition,
+      };
+
+      const futureSchedulesBeforeSchool = await this.dailyScheduleRepository.find({
+        where: whereBeforeSchool,
+        relations: ['students'],
+      });
+
+      for (const sched of futureSchedulesBeforeSchool) {
+        const isEnrolled = sched.students.some((s) => s.id === studentId);
+        const shouldBeEnrolled = student.beforeSchoolDaysTransition.includes(sched.day);
+        const shouldBeRemovedByEndDate =
+          student.endDateOfClasses &&
+          new Date(sched.date).setHours(0, 0, 0, 0) > new Date(student.endDateOfClasses as any).setHours(0, 0, 0, 0);
+
+        if (!isEnrolled && shouldBeEnrolled && !shouldBeRemovedByEndDate) {
+          sched.students.push(student);
+          addPromises.push(this.dailyScheduleRepository.save(sched));
+        } else if (isEnrolled && (!shouldBeEnrolled || shouldBeRemovedByEndDate)) {
+          sched.students = sched.students.filter((s) => s.id !== studentId);
+          addPromises.push(this.dailyScheduleRepository.save(sched));
+        }
+      }
+    }
+
+    const removePromises: Promise<any>[] = [];
+
+    if (removedClasses) {
+      for (const removedClass of removedClasses) {
+        const schedulesToRemove = await this.dailyScheduleRepository
+          .createQueryBuilder('ds')
+          .innerJoin('ds.planning', 'pl')
+          .andWhere('pl.classId = :removedClassId', { removedClassId: removedClass.id })
+          .innerJoin('ds.students', 's_filter', 's_filter.id = :studentId', { studentId })
+          .leftJoinAndSelect('ds.students', 'allStudents')
+          .getMany();
+
+        schedulesToRemove.forEach((sched) => {
+          sched.students = sched.students.filter((t) => t.id !== studentId);
+          removePromises.push(this.dailyScheduleRepository.save(sched));
+        });
+      }
+    }
+
+    await Promise.all([...addPromises, ...removePromises]);
   }
 
   async remove(id: number): Promise<void> {
@@ -471,6 +823,35 @@ export class StudentService {
     const students = await this.repository
       .createQueryBuilder('student')
       .innerJoin('student.classes', 'class', 'class.id = :classId', { classId })
+      .andWhere(`:day = ANY(string_to_array(${column}, ','))`, { day })
+      .getMany();
+
+    return students;
+  }
+
+  async findByClassIdAndDayEnrolledTransition(
+    classId: number,
+    day: WeekDayEnum,
+    classType: ClassType,
+  ): Promise<StudentEntity[]> {
+    let column: string;
+
+    switch (classType) {
+      case ClassType.AFTER_SCHOOL:
+        column = 'student.after_school_days_transition';
+        break;
+      case ClassType.BEFORE_SCHOOL:
+        column = 'student.before_school_days_transition';
+        break;
+      case ClassType.ENROLLED:
+      default:
+        column = 'student.days_enrolled_transition';
+        break;
+    }
+
+    const students = await this.repository
+      .createQueryBuilder('student')
+      .innerJoin('student.classesTransition', 'class', 'class.id = :classId', { classId })
       .andWhere(`:day = ANY(string_to_array(${column}, ','))`, { day })
       .getMany();
 

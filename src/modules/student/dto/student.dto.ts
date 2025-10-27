@@ -65,6 +65,17 @@ export class CreateStudentDto {
 
   @ApiPropertyOptional({ type: String, format: 'date' })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'null' || value === null || value === '') {
+      return null;
+    }
+    return new Date(value);
+  })
+  @IsDate()
+  endDateOfClasses?: Date | null;
+
+  @ApiPropertyOptional({ type: String, format: 'date' })
+  @IsOptional()
   @IsDate()
   @Type(() => Date)
   startDateOfClasses?: Date;
@@ -86,6 +97,74 @@ export class CreateStudentDto {
   // @ToEmptyArray()
   @ToArray()
   afterSchoolDays?: WeekDayEnum[];
+
+  @ApiPropertyOptional({ type: [Number], isArray: true })
+  @IsOptional()
+  @Transform(({ value }) => {
+    const raw =
+      value == null || value === ''
+        ? []
+        : Array.isArray(value)
+          ? value
+          : typeof value === 'string'
+            ? value.split(',')
+            : [value];
+    const nums = raw
+      .map((v) => (typeof v === 'string' ? v.trim() : v))
+      .filter((v) => v !== '' && v !== null && v !== undefined)
+      .map((v) => Number(v))
+      .filter((n) => Number.isFinite(n));
+    return nums;
+  })
+  @IsArray()
+  @IsInt({ each: true })
+  classIds: number[];
+
+  @ApiPropertyOptional({ type: String, format: 'date' })
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  startDateOfClassesTransition?: Date;
+
+  @ApiProperty({ type: [String], enum: WeekDayEnum, isArray: true })
+  @IsOptional()
+  // @ToEmptyArray()
+  @ToArray()
+  daysEnrolledTransition?: WeekDayEnum[];
+
+  @ApiPropertyOptional({ type: [String], enum: WeekDayEnum, isArray: true })
+  @IsOptional()
+  // @ToEmptyArray()
+  @ToArray()
+  beforeSchoolDaysTransition?: WeekDayEnum[];
+
+  @ApiPropertyOptional({ type: [String], enum: WeekDayEnum, isArray: true })
+  @IsOptional()
+  // @ToEmptyArray()
+  @ToArray()
+  afterSchoolDaysTransition?: WeekDayEnum[];
+
+  @ApiPropertyOptional({ type: [Number], isArray: true })
+  @IsOptional()
+  @Transform(({ value }) => {
+    const raw =
+      value == null || value === ''
+        ? []
+        : Array.isArray(value)
+          ? value
+          : typeof value === 'string'
+            ? value.split(',')
+            : [value];
+    const nums = raw
+      .map((v) => (typeof v === 'string' ? v.trim() : v))
+      .filter((v) => v !== '' && v !== null && v !== undefined)
+      .map((v) => Number(v))
+      .filter((n) => Number.isFinite(n));
+    return nums;
+  })
+  @IsArray()
+  @IsInt({ each: true })
+  classIdsTransition: number[];
 
   @ApiPropertyOptional({ type: [Number], isArray: true })
   @IsOptional()
@@ -160,28 +239,6 @@ export class CreateStudentDto {
     required: false,
   })
   imageContactSecondary: string;
-
-  @ApiPropertyOptional({ type: [Number], isArray: true })
-  @IsOptional()
-  @Transform(({ value }) => {
-    const raw =
-      value == null || value === ''
-        ? []
-        : Array.isArray(value)
-          ? value
-          : typeof value === 'string'
-            ? value.split(',')
-            : [value];
-    const nums = raw
-      .map((v) => (typeof v === 'string' ? v.trim() : v))
-      .filter((v) => v !== '' && v !== null && v !== undefined)
-      .map((v) => Number(v))
-      .filter((n) => Number.isFinite(n));
-    return nums;
-  })
-  @IsArray()
-  @IsInt({ each: true })
-  classIds: number[];
 }
 
 export class UpdateStudentDto extends PartialType(CreateStudentDto) {}
@@ -195,8 +252,6 @@ export class FindStudentDtoQuery {
 
   @ApiProperty({ required: false, enum: WeekDayEnum })
   @IsOptional()
-  @IsOptional()
-  // @ToEmptyArray()
   @ToArray()
   dayEnrolled?: WeekDayEnum;
 
@@ -204,4 +259,20 @@ export class FindStudentDtoQuery {
   @IsOptional()
   @IsEnum(ProgramType)
   program?: ProgramType;
+
+  @ApiProperty({
+    required: false,
+    enum: ['ASC', 'DESC'],
+    description: 'Ordenar por fecha de fin de clases (solo los que la tienen)',
+  })
+  @IsOptional()
+  endDateOrder?: 'ASC' | 'DESC';
+
+  @ApiProperty({
+    required: false,
+    enum: ['ASC', 'DESC'],
+    description: 'Ordenar por fecha de inicio de transición (solo los que la tienen)',
+  })
+  @IsOptional()
+  transitionStartOrder?: 'ASC' | 'DESC';
 }

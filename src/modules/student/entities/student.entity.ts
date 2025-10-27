@@ -48,8 +48,11 @@ export class StudentEntity {
   })
   contacts: ContactPersonEntity[];
 
+  @Column({ type: 'date', name: 'end_date_of_classes', nullable: true })
+  endDateOfClasses: Date;
+
   @Column({ type: 'date', name: 'start_date_of_classes', nullable: true })
-  startDateOfClasses: Date;
+  startDateOfClasses: Date | null;
 
   @Column('simple-array', { name: 'days_enrolled' })
   @IsArray()
@@ -68,13 +71,6 @@ export class StudentEntity {
   @IsEnum(WeekDayEnum, { each: true })
   afterSchoolDays: WeekDayEnum[];
 
-  @ManyToMany(() => AdditionalProgramEntity)
-  @JoinTable()
-  additionalPrograms: AdditionalProgramEntity[];
-
-  @ManyToOne(() => CampusEntity, (campus) => campus.students, { nullable: true, onDelete: 'SET NULL' })
-  campus: CampusEntity;
-
   @ManyToMany(() => ClassEntity, (c) => c.students, { cascade: true })
   @JoinTable({
     name: 'students_classes_classes',
@@ -88,6 +84,47 @@ export class StudentEntity {
     },
   })
   classes: ClassEntity[];
+
+  @Column({ type: 'date', name: 'start_date_of_classes_transition', nullable: true })
+  startDateOfClassesTransition: Date | null;
+
+  @Column('simple-array', { name: 'days_enrolled_transition', nullable: true })
+  @IsArray()
+  @IsEnum(WeekDayEnum, { each: true })
+  daysEnrolledTransition: WeekDayEnum[];
+
+  @Column('simple-array', { nullable: true, name: 'before_school_days_transition' })
+  @IsOptional()
+  @IsArray()
+  @IsEnum(WeekDayEnum, { each: true })
+  beforeSchoolDaysTransition: WeekDayEnum[];
+
+  @Column('simple-array', { nullable: true, name: 'after_school_days_transition' })
+  @IsOptional()
+  @IsArray()
+  @IsEnum(WeekDayEnum, { each: true })
+  afterSchoolDaysTransition: WeekDayEnum[];
+
+  @ManyToMany(() => ClassEntity, (c) => c.studentsTransition, { cascade: true })
+  @JoinTable({
+    name: 'students_classes_transition_classes',
+    joinColumn: {
+      name: 'studentsId',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'classesId',
+      referencedColumnName: 'id',
+    },
+  })
+  classesTransition: ClassEntity[];
+
+  @ManyToMany(() => AdditionalProgramEntity)
+  @JoinTable()
+  additionalPrograms: AdditionalProgramEntity[];
+
+  @ManyToOne(() => CampusEntity, (campus) => campus.students, { nullable: true, onDelete: 'SET NULL' })
+  campus: CampusEntity;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

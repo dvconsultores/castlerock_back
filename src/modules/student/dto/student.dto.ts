@@ -9,6 +9,7 @@ import {
   IsNumber,
   IsNotEmpty,
   IsInt,
+  IsDateString,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
@@ -122,7 +123,7 @@ export class CreateStudentDto {
 
   @ApiPropertyOptional({ type: String, format: 'date' })
   @IsOptional()
-  @IsDate()
+  @IsDateString()
   @Type(() => Date)
   startDateOfClassesTransition?: Date;
 

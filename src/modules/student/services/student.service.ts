@@ -49,6 +49,7 @@ export class StudentService {
     imageContactSecondary?: Multer.File,
   ): Promise<any> {
     try {
+      console.log('Creating student with data:', dto);
       if (image) {
         const imageUrl = await this.storageService.upload(image);
         dto.image = imageUrl;
@@ -289,11 +290,15 @@ export class StudentService {
     }
   }
 
-  private isAfterEndDate = (student: StudentEntity, schedDate: Date): boolean => {
+  private isAfterEndDate = (student: StudentEntity, schedDate: Date | string): boolean => {
     if (!student.endDateOfClasses) return false;
+
     const endDate = new Date(student.endDateOfClasses as any);
     endDate.setHours(0, 0, 0, 0);
-    return schedDate.getTime() > endDate.getTime();
+
+    const sched = new Date(schedDate);
+
+    return sched.getTime() > endDate.getTime();
   };
 
   private isOutsideActiveRange = (student: StudentEntity, schedDate: Date): boolean => {

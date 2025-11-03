@@ -123,9 +123,9 @@ export class CreateStudentDto {
 
   @ApiPropertyOptional({ type: String, format: 'date' })
   @IsOptional()
-  @IsDateString()
-  @Type(() => Date)
-  startDateOfClassesTransition?: Date;
+  // @IsDateString()
+  // @Type(() => Date)
+  startDateOfClassesTransition?: any;
 
   @ApiProperty({ type: [String], enum: WeekDayEnum, isArray: true })
   @IsOptional()

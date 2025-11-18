@@ -55,7 +55,9 @@ export class DailyScheduleService {
 
       const dayIndex = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 }[dto.day];
       const baseDate = new Date(planning.startDate);
+      console.log(baseDate, dayIndex);
       const scheduleDate = addDays(baseDate, dayIndex);
+
       scheduleDate.setHours(0, 0, 0, 0);
 
       const allStudents = await this.studentService.findByIds(dto.studentIds);
@@ -67,17 +69,15 @@ export class DailyScheduleService {
 
         if (!hasStart && !hasEnd && !hasStartTransition) return true;
 
-        const sd = hasStart ? new Date(s.startDateOfClasses as any) : null;
-        const ed = hasEnd ? new Date(s.endDateOfClasses as any) : null;
-        const sdTransition = hasStartTransition ? new Date(s.startDateOfClassesTransition as any) : null;
+        const sd = hasStart ? this.normalizeDate(s.startDateOfClasses) : null;
+        const ed = hasEnd ? this.normalizeDate(s.endDateOfClasses) : null;
+        const sdTransition = hasStartTransition ? this.normalizeDate(s.startDateOfClassesTransition) : null;
 
-        if (sd) sd.setHours(0, 0, 0, 0);
-        if (ed) ed.setHours(0, 0, 0, 0);
-        if (sdTransition) sdTransition.setHours(0, 0, 0, 0);
+        const schNorm = this.normalizeDate(scheduleDate);
 
-        const afterStart = !sd || scheduleDate.getTime() >= sd.getTime();
-        const beforeEnd = !ed || scheduleDate.getTime() <= ed.getTime();
-        const beforeStartTransition = !sdTransition || scheduleDate.getTime() <= sdTransition.getTime();
+        const afterStart = !sd || schNorm!.getTime() >= sd.getTime();
+        const beforeEnd = !ed || schNorm!.getTime() <= ed.getTime();
+        const beforeStartTransition = !sdTransition || schNorm!.getTime() < sdTransition.getTime();
 
         return afterStart && beforeEnd && beforeStartTransition;
       });
@@ -132,6 +132,13 @@ export class DailyScheduleService {
     } catch (error) {
       throw new ExceptionHandler(error);
     }
+  }
+
+  normalizeDate(date: Date | string | null): Date | null {
+    if (!date) return null;
+
+    const d = new Date(date);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
   }
 
   async findOne(id: number): Promise<DailyScheduleEntity | null> {

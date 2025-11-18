@@ -79,6 +79,8 @@ export class PlanningService {
 
     const { startDate, endDate } = this.getWeekRange(dto.year, dto.month, dto.week!);
 
+    console.log('startDate:', startDate, 'endDate:', endDate);
+
     const planningDto: PlanningDto = {
       year: dto.year,
       month: dto.month,
@@ -113,6 +115,10 @@ export class PlanningService {
       const studentIds = students.map((s) => s.id);
       const transitionStudentIds = studentsTransition.map((s) => s.id);
 
+      console.log(
+        `Creating daily schedule for day: ${day} with teachers: [${teacherIds}], students: [${studentIds}], transition students: [${transitionStudentIds}]`,
+      );
+
       await this.dailyScheduleService.create(
         {
           planningId: plan.id,
@@ -124,6 +130,8 @@ export class PlanningService {
         userId,
       );
     }
+
+    console.log('Planning created successfully with all daily schedules.');
 
     const planFound = await this.findOneByParams({
       campus: dto.campus,

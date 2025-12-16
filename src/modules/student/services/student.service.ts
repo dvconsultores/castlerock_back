@@ -49,7 +49,6 @@ export class StudentService {
     imageContactSecondary?: Multer.File,
   ): Promise<any> {
     try {
-      console.log('Creating student with data:', dto);
       if (image) {
         const imageUrl = await this.storageService.upload(image);
         dto.image = imageUrl;
@@ -478,12 +477,10 @@ export class StudentService {
       }
 
       if (updateData.additionalProgramIds) {
-        console.log('Updating additional programs:', updateData.additionalProgramIds);
         const additionalPrograms = await this.additionalProgramService.findByIds(updateData.additionalProgramIds);
         student.additionalPrograms = additionalPrograms;
       }
 
-      console.log('Updating classes:', updateData.classIds, classesIds);
       if ((updateData.classIds !== undefined && updateData.classIds.length >= 0) || classesIds.length > 0) {
         const classes = updateData.classIds ? await this.classService.findByIds(updateData.classIds) : classesIds;
 
@@ -633,8 +630,6 @@ export class StudentService {
 
         student.classesTransition = classesTransition;
       }
-
-      console.dir(student, { depth: null });
 
       if (!student.campus) {
         student.campus = null as any;

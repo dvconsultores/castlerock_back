@@ -129,19 +129,19 @@ export class CreateStudentDto {
 
   @ApiProperty({ type: [String], enum: WeekDayEnum, isArray: true })
   @IsOptional()
-  @ToEmptyArray()
+  // @ToEmptyArray()
   @ToArray()
   daysEnrolledTransition?: WeekDayEnum[];
 
   @ApiPropertyOptional({ type: [String], enum: WeekDayEnum, isArray: true })
   @IsOptional()
-  @ToEmptyArray()
+  // @ToEmptyArray()
   @ToArray()
   beforeSchoolDaysTransition?: WeekDayEnum[];
 
   @ApiPropertyOptional({ type: [String], enum: WeekDayEnum, isArray: true })
   @IsOptional()
-  @ToEmptyArray()
+  // @ToEmptyArray()
   @ToArray()
   afterSchoolDaysTransition?: WeekDayEnum[];
 

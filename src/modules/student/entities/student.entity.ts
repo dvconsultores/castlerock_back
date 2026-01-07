@@ -132,6 +132,22 @@ export class StudentEntity {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
+  @Column('decimal', {
+    name: 'weekly_amount',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  weeklyAmount: number;
+
+  @Column('decimal', {
+    name: 'monthly_amount',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  monthlyAmount: number;
+
   // @Expose()
   // get program(): ProgramType {
   //   if (!this.dateOfBirth) return ProgramType.PRIMARY;

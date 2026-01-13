@@ -12,6 +12,8 @@ import {
   IsNumber,
   ValidateNested,
   IsArray,
+  IsBoolean,
+  IsIn,
 } from 'class-validator';
 import { CreateUserDto, UpdateUserDto } from '../../user/dto/user.dto';
 import { Type } from 'class-transformer';
@@ -29,4 +31,12 @@ export class CreateReportDto {
   @ApiProperty({ type: String, format: 'date' })
   @IsNotEmpty()
   endDate: string;
+
+  @IsOptional()
+  @IsBoolean()
+  pdf?: boolean;
+
+  @IsOptional()
+  @IsIn(['weekly', 'monthly', 'both'])
+  mode?: 'weekly' | 'monthly' | 'both';
 }

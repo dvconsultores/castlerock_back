@@ -242,10 +242,12 @@ export class CreateStudentDto {
   })
   imageContactSecondary: string;
 
+  @ApiProperty()
   @IsOptional()
   @IsNumber()
   weeklyAmount: number;
 
+  @ApiProperty()
   @IsOptional()
   @IsNumber()
   monthlyAmount: number;

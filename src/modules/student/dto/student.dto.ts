@@ -244,11 +244,13 @@ export class CreateStudentDto {
 
   @ApiProperty()
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   weeklyAmount: number;
 
   @ApiProperty()
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   monthlyAmount: number;
 }

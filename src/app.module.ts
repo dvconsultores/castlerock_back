@@ -25,6 +25,7 @@ import { StorageModule } from './shared/storage/storage.module';
 import { DailyScheduleModule } from './modules/daily-schedule/daily-schedule.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { TasksModule } from './tasks/tasks.module';
+import { ReportModule } from './modules/report/report.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { TasksModule } from './tasks/tasks.module';
     AttendanceModule,
     ScheduleModule.forRoot(),
     TasksModule,
+    ReportModule,
   ],
   controllers: [AppController],
   providers: [

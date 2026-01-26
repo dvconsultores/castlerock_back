@@ -126,6 +126,7 @@ export class CreateStudentDto {
   @Transform(({ value }) => (value === '' ? null : value))
   // @IsDateString()
   // @Type(() => Date)
+  @Transform(({ value }) => (value === '' ? null : value))
   startDateOfClassesTransition?: any;
 
   @ApiProperty({ type: [String], enum: WeekDayEnum, isArray: true })
@@ -241,6 +242,18 @@ export class CreateStudentDto {
     required: false,
   })
   imageContactSecondary: string;
+
+  @ApiProperty()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  weeklyAmount: number;
+
+  @ApiProperty()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  monthlyAmount: number;
 }
 
 export class UpdateStudentDto extends PartialType(CreateStudentDto) {}

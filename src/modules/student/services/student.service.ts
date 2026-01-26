@@ -83,7 +83,11 @@ export class StudentService {
         classesTransition,
       });
 
+      console.log('Creating student with data:', newEntity);
+
       const student = await this.repository.save(newEntity);
+
+      console.log('Student created with ID:', student.id);
 
       const studentId = student.id;
 
@@ -635,6 +639,8 @@ export class StudentService {
         student.campus = null as any;
       }
 
+      console.log('Updating student with ID:', student.id, 'Data:', student);
+
       await this.repository.save(student);
     } catch (error) {
       console.error('Error updating student:', error);
@@ -855,6 +861,11 @@ export class StudentService {
       .andWhere(`:day = ANY(string_to_array(${column}, ','))`, { day })
       .getMany();
 
+    return students;
+  }
+
+  async findByFilter(filter: any): Promise<StudentEntity[]> {
+    const students = await this.repository.findBy(filter);
     return students;
   }
 }

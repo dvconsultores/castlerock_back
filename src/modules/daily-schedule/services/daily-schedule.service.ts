@@ -149,9 +149,50 @@ export class DailyScheduleService {
   }
 
   async findAll(): Promise<DailyScheduleEntity[]> {
-    return await this.dailyScheduleRepository.find({
-      relations: ['planning', 'teachers', 'students', 'planning.class', 'teachers.user', 'planning.campus'],
+    // 🥇 Paso 1 — obtener schedules con relaciones ligeras
+    const schedules = await this.dailyScheduleRepository
+      .createQueryBuilder('daily')
+      .leftJoinAndSelect('daily.planning', 'planning')
+      .leftJoinAndSelect('planning.class', 'class')
+      .leftJoinAndSelect('planning.campus', 'campus')
+      .getMany();
+
+    if (!schedules.length) return [];
+
+    const scheduleIds = schedules.map((s) => s.id);
+
+    // 🥈 Paso 2 — cargar teachers aparte
+    const teacherRelations = await this.dailyScheduleRepository
+      .createQueryBuilder('daily')
+      .leftJoinAndSelect('daily.teachers', 'teacher')
+      .leftJoinAndSelect('teacher.user', 'user')
+      .where('daily.id IN (:...ids)', { ids: scheduleIds })
+      .getMany();
+
+    // 🥉 Paso 3 — cargar students aparte
+    const studentRelations = await this.dailyScheduleRepository
+      .createQueryBuilder('daily')
+      .leftJoinAndSelect('daily.students', 'student')
+      .where('daily.id IN (:...ids)', { ids: scheduleIds })
+      .getMany();
+
+    // 🧩 Paso 4 — unir en memoria
+    const teacherMap = new Map<number, any[]>();
+    teacherRelations.forEach((d) => {
+      teacherMap.set(d.id, d.teachers || []);
     });
+
+    const studentMap = new Map<number, any[]>();
+    studentRelations.forEach((d) => {
+      studentMap.set(d.id, d.students || []);
+    });
+
+    schedules.forEach((schedule) => {
+      schedule.teachers = teacherMap.get(schedule.id) || [];
+      schedule.students = studentMap.get(schedule.id) || [];
+    });
+
+    return schedules;
   }
 
   async update(id: number, updateData: UpdateDailyScheduleDto): Promise<DailyScheduleEntity> {

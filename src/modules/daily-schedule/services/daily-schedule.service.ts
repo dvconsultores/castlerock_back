@@ -169,10 +169,11 @@ export class DailyScheduleService {
       .where('daily.id IN (:...ids)', { ids: scheduleIds })
       .getMany();
 
-    // 🥉 Paso 3 — cargar students aparte
+    // 🥉 Paso 3 — cargar students aparte (SOLO CAMPOS NECESARIOS)
     const studentRelations = await this.dailyScheduleRepository
       .createQueryBuilder('daily')
-      .leftJoinAndSelect('daily.students', 'student')
+      .leftJoin('daily.students', 'student')
+      .addSelect(['student.id', 'student.firstName', 'student.lastName', 'student.daysEnrolled'])
       .where('daily.id IN (:...ids)', { ids: scheduleIds })
       .getMany();
 

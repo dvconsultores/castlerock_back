@@ -20,6 +20,7 @@ import { PlanningService } from '../../planning/services/planning.service';
 import { TeacherService } from '../../teacher/services/teacher.service';
 import { StudentService } from '../../student/services/student.service';
 import { NotificationService } from '../../notification/services/notification.service';
+import { WeekDayEnum } from '../../../shared/enums/week-day.enum';
 
 @Injectable()
 export class DailyScheduleService {
@@ -148,21 +149,26 @@ export class DailyScheduleService {
     });
   }
 
-  async findAll(): Promise<DailyScheduleEntity[]> {
-    // 🥇 Paso 1 — obtener schedules con relaciones ligeras
-    const schedules = await this.dailyScheduleRepository
+  async findAll(day?: WeekDayEnum): Promise<DailyScheduleEntity[]> {
+    const query = this.dailyScheduleRepository
       .createQueryBuilder('daily')
       .leftJoinAndSelect('daily.planning', 'planning')
       .leftJoinAndSelect('planning.class', 'class')
       .leftJoin('planning.campus', 'campus')
-      .addSelect(['campus.id', 'campus.name'])
-      .getMany();
+      .addSelect(['campus.id', 'campus.name']);
+
+    // 🔥 FILTRO OPCIONAL
+    if (day) {
+      query.andWhere('daily.day = :day', { day });
+    }
+
+    const schedules = await query.getMany();
 
     if (!schedules.length) return [];
 
     const scheduleIds = schedules.map((s) => s.id);
 
-    // 🥈 Paso 2 — cargar teachers aparte (SOLO CAMPOS NECESARIOS)
+    // 🥈 Paso 2 — cargar teachers aparte
     const teacherRelations = await this.dailyScheduleRepository
       .createQueryBuilder('daily')
       .leftJoin('daily.teachers', 'teacher')
@@ -171,7 +177,7 @@ export class DailyScheduleService {
       .where('daily.id IN (:...ids)', { ids: scheduleIds })
       .getMany();
 
-    // 🥉 Paso 3 — cargar students aparte (SOLO CAMPOS NECESARIOS)
+    // 🥉 Paso 3 — cargar students aparte
     const studentRelations = await this.dailyScheduleRepository
       .createQueryBuilder('daily')
       .leftJoin('daily.students', 'student')

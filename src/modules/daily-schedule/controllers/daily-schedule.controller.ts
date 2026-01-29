@@ -22,6 +22,7 @@ import { UserRole } from '../../../shared/enums/user-role.enum';
 import { Roles } from '../../../helpers/decorators/roles.decorator';
 import { User } from '../../../helpers/decorators/user.decorator';
 import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
+import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 
 @ApiTags('Daily Schedules')
 @Controller('daily-schedules')
@@ -43,6 +44,9 @@ export class DailyScheduleController {
   @Get()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
+  @UseInterceptors(CacheInterceptor)
+  @CacheKey('daily-schedules-find-all')
+  @CacheTTL(60 * 1000)
   async findAll() {
     return this.dailyScheduleService.findAll();
   }

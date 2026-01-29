@@ -154,18 +154,20 @@ export class DailyScheduleService {
       .createQueryBuilder('daily')
       .leftJoinAndSelect('daily.planning', 'planning')
       .leftJoinAndSelect('planning.class', 'class')
-      .leftJoinAndSelect('planning.campus', 'campus')
+      .leftJoin('planning.campus', 'campus')
+      .addSelect(['campus.id', 'campus.name'])
       .getMany();
 
     if (!schedules.length) return [];
 
     const scheduleIds = schedules.map((s) => s.id);
 
-    // 🥈 Paso 2 — cargar teachers aparte
+    // 🥈 Paso 2 — cargar teachers aparte (SOLO CAMPOS NECESARIOS)
     const teacherRelations = await this.dailyScheduleRepository
       .createQueryBuilder('daily')
-      .leftJoinAndSelect('daily.teachers', 'teacher')
-      .leftJoinAndSelect('teacher.user', 'user')
+      .leftJoin('daily.teachers', 'teacher')
+      .leftJoin('teacher.user', 'user')
+      .addSelect(['teacher.id', 'user.id', 'user.firstName', 'user.lastName', 'user.email'])
       .where('daily.id IN (:...ids)', { ids: scheduleIds })
       .getMany();
 

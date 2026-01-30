@@ -46,10 +46,10 @@ export class DailyScheduleController {
   @Get()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @UseInterceptors(DailySchedulesCacheInterceptor)
-  @CacheTTL(60 * 1000)
-  async findAll(@Query('day') day?: WeekDayEnum) {
-    return this.dailyScheduleService.findAll(day);
+  // @UseInterceptors(DailySchedulesCacheInterceptor)
+  // @CacheTTL(60 * 1000)
+  async findAll(@Query('date') date?: string) {
+    return this.dailyScheduleService.findAll(date);
   }
 
   @Get(':dailyScheduleId')

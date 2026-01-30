@@ -149,7 +149,7 @@ export class DailyScheduleService {
     });
   }
 
-  async findAll(day?: WeekDayEnum): Promise<DailyScheduleEntity[]> {
+  async findAll(date?: string): Promise<DailyScheduleEntity[]> {
     const query = this.dailyScheduleRepository
       .createQueryBuilder('daily')
       .leftJoinAndSelect('daily.planning', 'planning')
@@ -158,8 +158,8 @@ export class DailyScheduleService {
       .addSelect(['campus.id', 'campus.name']);
 
     // 🔥 FILTRO OPCIONAL
-    if (day) {
-      query.andWhere('daily.day = :day', { day });
+    if (date) {
+      query.andWhere('DATE(daily.date) = :date', { date });
     }
 
     const schedules = await query.getMany();

@@ -203,7 +203,7 @@ export class AuthService {
         phone: dto.schoolPhone,
         nickname: dto.schoolName.substring(0, 3).toUpperCase(),
         image: '', // O una imagen por defecto
-        owners: [savedUser], // Vinculamos la relación
+        users: [savedUser], // Vinculamos la relación
       });
 
       const savedCampus = await campusRepo.save(newCampus);

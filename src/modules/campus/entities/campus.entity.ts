@@ -34,7 +34,7 @@ export class CampusEntity {
 
   @OneToMany(() => UserEntity, (user) => user.campus)
   @JoinColumn()
-  owners: UserEntity[];
+  users: UserEntity[];
 
   @OneToMany(() => SubscriptionEntity, (subscription) => subscription.campus)
   subscriptions: SubscriptionEntity[];

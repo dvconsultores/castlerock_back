@@ -50,7 +50,7 @@ export class UserEntity {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @ManyToOne(() => CampusEntity, (campus) => campus.owners, { onDelete: 'SET NULL' })
+  @ManyToOne(() => CampusEntity, (campus) => campus.owners, { onDelete: 'SET NULL', nullable: true })
   campus: CampusEntity;
 
   @Exclude()

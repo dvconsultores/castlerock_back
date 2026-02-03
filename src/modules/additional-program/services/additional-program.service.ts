@@ -7,6 +7,7 @@ import { plainToClass } from 'class-transformer';
 import { Multer } from 'multer';
 import { ExceptionHandler } from '../../../helpers/handlers/exception.handler';
 import { StorageService } from '../../../shared/storage/storage.service';
+import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
 
 @Injectable()
 export class AdditionalProgramService {
@@ -20,7 +21,7 @@ export class AdditionalProgramService {
     return await this.repository.save(entity);
   }
 
-  async create(dto: CreateAdditionalProgramDto, image?: Multer.File): Promise<AdditionalProgramEntity> {
+  async create(user: AuthUser, dto: CreateAdditionalProgramDto, image?: Multer.File): Promise<AdditionalProgramEntity> {
     try {
       let imageUrl: string | null = null;
 
@@ -29,7 +30,7 @@ export class AdditionalProgramService {
         dto.image = imageUrl;
       }
 
-      const newEntity = plainToClass(AdditionalProgramEntity, dto);
+      const newEntity = plainToClass(AdditionalProgramEntity, { ...dto, campus: user.campusId });
 
       return await this.repository.save(newEntity);
     } catch (error) {
@@ -52,9 +53,9 @@ export class AdditionalProgramService {
     return additionalPrograms;
   }
 
-  async findOne(id: number): Promise<AdditionalProgramEntity | null> {
+  async findOne(user: AuthUser, id: number): Promise<AdditionalProgramEntity | null> {
     return await this.repository.findOne({
-      where: { id },
+      where: { id, campus: { id: user.campusId } },
       relations: ['campus'],
       select: {
         id: true,
@@ -76,7 +77,7 @@ export class AdditionalProgramService {
     });
   }
 
-  async update(id: number, updateData: UpdateAdditionalProgramDto, image?: Multer.File): Promise<void> {
+  async update(user: AuthUser, id: number, updateData: UpdateAdditionalProgramDto, image?: Multer.File): Promise<void> {
     try {
       let imageUrl: string | undefined;
 
@@ -85,7 +86,10 @@ export class AdditionalProgramService {
         updateData.image = imageUrl;
       }
 
-      const updateResult = await this.repository.update({ id }, plainToClass(AdditionalProgramEntity, updateData));
+      const updateResult = await this.repository.update(
+        { id, campus: { id: user.campusId } },
+        plainToClass(AdditionalProgramEntity, updateData),
+      );
       if (updateResult.affected === 0) {
         throw new NotFoundException('Item not found');
       }
@@ -94,8 +98,8 @@ export class AdditionalProgramService {
     }
   }
 
-  async remove(id: number): Promise<void> {
-    const deleteResult = await this.repository.delete({ id });
+  async remove(user: AuthUser, id: number): Promise<void> {
+    const deleteResult = await this.repository.delete({ id, campus: { id: user.campusId } });
     if (deleteResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }

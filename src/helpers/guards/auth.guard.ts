@@ -29,14 +29,27 @@ export class AuthGuard implements CanActivate {
     }
 
     try {
-      const payload = await this.jwtService.verify(token, {
+      let payload = await this.jwtService.verify(token, {
         secret: this.configService.get('JWT_SECRET', { infer: true }),
       });
 
       const roles = this.reflector.getAllAndOverride<UserRole[]>('roles', [context.getHandler(), context.getClass()]);
 
-      if (roles && !roles.includes(payload.role)) {
+      if (payload.role !== UserRole.ADMIN && roles && !roles.includes(payload.role)) {
         throw new UnauthorizedException('No autorizado');
+      }
+
+      if (payload.role === UserRole.ADMIN) {
+        payload = {
+          ...payload,
+          campusId: request.headers['campus-id'] || null,
+        };
+
+        return true;
+      }
+
+      if (!payload.campusId) {
+        throw new UnauthorizedException('No autorizado - Campus no encontrado');
       }
 
       request['user'] = payload;

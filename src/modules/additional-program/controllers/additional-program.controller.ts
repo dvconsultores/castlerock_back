@@ -21,15 +21,17 @@ import { Roles } from '../../../helpers/decorators/roles.decorator';
 import { UserRole } from '../../../shared/enums/user-role.enum';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Multer } from 'multer';
+import { User } from '../../../helpers/decorators/user.decorator';
+import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
 
 @ApiTags('Additional Programs')
 @Controller('additional-programs')
+@UseGuards(AuthGuard)
+@ApiBearerAuth()
 export class AdditionalProgramController {
   constructor(private readonly additionalProgramService: AdditionalProgramService) {}
 
   @Post()
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
@@ -37,28 +39,22 @@ export class AdditionalProgramController {
     description: 'Create an additional program with image upload',
     type: CreateAdditionalProgramDto,
   })
-  async create(@UploadedFile() image: Multer.File, @Body() body: CreateAdditionalProgramDto) {
-    return this.additionalProgramService.create(body, image);
+  async create(@User() user: AuthUser, @UploadedFile() image: Multer.File, @Body() body: CreateAdditionalProgramDto) {
+    return this.additionalProgramService.create(user, body, image);
   }
 
   @Get()
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
   @ApiQuery({ name: 'campus', required: false, type: Number, description: 'Campus ID' })
-  async findAll(@Query('campus') campusId?: number) {
-    return this.additionalProgramService.findAll(campusId);
+  async findAll(@User() user: AuthUser, @Query('campus') campusId?: number) {
+    return this.additionalProgramService.findAll(user.campusId || campusId);
   }
 
   @Get(':additionalProgramId')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  async findOne(@Param('additionalProgramId') id: number) {
-    return this.additionalProgramService.findOne(id);
+  async findOne(@User() user: AuthUser, @Param('additionalProgramId') id: number) {
+    return this.additionalProgramService.findOne(user, id);
   }
 
   @Patch(':additionalProgramId')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
@@ -67,18 +63,17 @@ export class AdditionalProgramController {
     type: UpdateAdditionalProgramDto,
   })
   async update(
+    @User() user: AuthUser,
     @Param('additionalProgramId') id: number,
     @Body() body: UpdateAdditionalProgramDto,
     @UploadedFile() image: Multer.File,
   ) {
-    return this.additionalProgramService.update(id, body, image);
+    return this.additionalProgramService.update(user, id, body, image);
   }
 
   @Delete(':additionalProgramId')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async remove(@Param('additionalProgramId') id: number) {
-    return this.additionalProgramService.remove(id);
+  async remove(@User() user: AuthUser, @Param('additionalProgramId') id: number) {
+    return this.additionalProgramService.remove(user, id);
   }
 }

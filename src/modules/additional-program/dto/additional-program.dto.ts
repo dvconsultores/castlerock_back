@@ -23,11 +23,11 @@ export class CreateAdditionalProgramDto {
   @IsString()
   name: string;
 
-  @ApiProperty()
-  @IsNotEmpty()
-  @StringToNumber()
-  @IsNumber()
-  campus: number;
+  // @ApiProperty()
+  // @IsNotEmpty()
+  // @StringToNumber()
+  // @IsNumber()
+  // campus: number;
 
   @ApiProperty({ type: [String], enum: WeekDayEnum, isArray: true })
   @ToArray()

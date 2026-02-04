@@ -59,6 +59,8 @@ export class CampusService {
       }
 
       return [teacher.campus];
+    } else if (user.role === UserRole.OWNER) {
+      return await this.campusRepository.find({ where: { users: { id: user.id } } });
     } else {
       throw new ForbiddenException(`User role ${user.role} not allowed to access this resource`);
     }

@@ -32,6 +32,7 @@ export class NotificationController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   async findByUserId(@User() user: AuthUser) {
+    console.log('Fetching notifications for user:', user);
     return this.notificationService.findByUserId(user.id);
   }
 

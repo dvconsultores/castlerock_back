@@ -44,8 +44,6 @@ export class AuthGuard implements CanActivate {
           ...payload,
           campusId: request.headers['campus-id'] || null,
         };
-
-        return true;
       }
 
       if (!payload.campusId) {

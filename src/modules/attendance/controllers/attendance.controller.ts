@@ -21,6 +21,8 @@ import { Roles } from '../../../helpers/decorators/roles.decorator';
 import { AuthGuard } from '../../../helpers/guards/auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Multer } from 'multer';
+import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
+import { User } from '../../../helpers/decorators/user.decorator';
 
 @ApiTags('Attendances')
 @Controller('attendances')
@@ -41,22 +43,25 @@ export class AttendanceController {
   }
 
   @Get()
-  async findByParams(@Query(new ValidationPipe({ transform: true })) query: FindAttendanceDtoQuery) {
-    return this.attendanceService.findByParams(query);
+  async findByParams(
+    @User() user: AuthUser,
+    @Query(new ValidationPipe({ transform: true })) query: FindAttendanceDtoQuery,
+  ) {
+    return this.attendanceService.findByParams(user, query);
   }
 
   @Get(':attendanceId')
-  async findOne(@Param('attendanceId') id: number) {
-    return this.attendanceService.findOne(id);
+  async findOne(@User() user: AuthUser, @Param('attendanceId') id: number) {
+    return this.attendanceService.findOne(user, id);
   }
 
   @Patch(':attendanceId')
-  async update(@Param('attendanceId') id: number, @Body() body: UpdateAttendanceDto) {
-    return this.attendanceService.update(id, body);
+  async update(@User() user: AuthUser, @Param('attendanceId') id: number, @Body() body: UpdateAttendanceDto) {
+    return this.attendanceService.update(user, id, body);
   }
 
   @Delete(':attendanceId')
-  async remove(@Param('attendanceId') id: number) {
-    return this.attendanceService.remove(id);
+  async remove(@User() user: AuthUser, @Param('attendanceId') id: number) {
+    return this.attendanceService.remove(user, id);
   }
 }

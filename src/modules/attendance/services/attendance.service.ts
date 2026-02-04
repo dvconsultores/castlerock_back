@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AttendanceEntity } from '../entities/attendance.entity';
 import { CreateAttendanceDto, FindAttendanceDtoQuery } from '../dto/attendance.dto';
+import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
 
 @Injectable()
 export class AttendanceService {
@@ -48,9 +49,9 @@ export class AttendanceService {
     }));
   }
 
-  async findOne(id: number): Promise<any | null> {
+  async findOne(user: AuthUser, id: number): Promise<any | null> {
     const attendance = await this.repository.findOne({
-      where: { id },
+      where: { id, student: { campus: { id: user.campusId } } },
       relations: ['dailySchedule', 'student'],
     });
 
@@ -60,8 +61,10 @@ export class AttendanceService {
     };
   }
 
-  async findByParams(query: FindAttendanceDtoQuery): Promise<AttendanceEntity[]> {
+  async findByParams(user: AuthUser, query: FindAttendanceDtoQuery): Promise<AttendanceEntity[]> {
     const { studentId, status, year, monthFrom, monthTo } = query;
+
+    const campusId = user.campusId;
 
     const queryBuilder = this.repository
       .createQueryBuilder('attendance')
@@ -70,6 +73,10 @@ export class AttendanceService {
       .leftJoinAndSelect('dailySchedule.planning', 'planning')
       .leftJoinAndSelect('planning.class', 'class')
       .leftJoinAndSelect('planning.campus', 'campus');
+
+    if (campusId) {
+      queryBuilder.andWhere('campus.id = :campusId', { campusId });
+    }
 
     if (studentId) {
       queryBuilder.andWhere('student.id = :studentId', { studentId });
@@ -102,15 +109,15 @@ export class AttendanceService {
     }));
   }
 
-  async update(id: number, updateData: Partial<AttendanceEntity>): Promise<void> {
-    const updateResult = await this.repository.update({ id }, updateData);
+  async update(user: AuthUser, id: number, updateData: Partial<AttendanceEntity>): Promise<void> {
+    const updateResult = await this.repository.update({ id, student: { campus: { id: user.campusId } } }, updateData);
     if (updateResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }
   }
 
-  async remove(id: number): Promise<void> {
-    const deleteResult = await this.repository.delete({ id });
+  async remove(user: AuthUser, id: number): Promise<void> {
+    const deleteResult = await this.repository.delete({ id, student: { campus: { id: user.campusId } } });
     if (deleteResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }

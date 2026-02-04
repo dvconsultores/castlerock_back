@@ -48,7 +48,6 @@ export class CampusController {
   @Get()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   async findAll(@User() user: AuthUser) {
     return this.campusService.findAll(user);
   }
@@ -57,7 +56,7 @@ export class CampusController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async findOne(@Param('campusId') id: number) {
+  async findOne(@User() user: AuthUser, @Param('campusId') id: number) {
     return this.campusService.findOne(id);
   }
 

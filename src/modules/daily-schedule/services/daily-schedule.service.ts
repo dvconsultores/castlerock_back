@@ -21,6 +21,7 @@ import { TeacherService } from '../../teacher/services/teacher.service';
 import { StudentService } from '../../student/services/student.service';
 import { NotificationService } from '../../notification/services/notification.service';
 import { WeekDayEnum } from '../../../shared/enums/week-day.enum';
+import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
 
 @Injectable()
 export class DailyScheduleService {
@@ -38,10 +39,12 @@ export class DailyScheduleService {
     return await this.dailyScheduleRepository.save(entity);
   }
 
-  async create(dto: CreateDailyScheduleDto, adminId: number): Promise<DailyScheduleEntity> {
+  async create(user: AuthUser, dto: CreateDailyScheduleDto, adminId: number): Promise<DailyScheduleEntity> {
     try {
+      const campusId = user.campusId;
+
       const dailyScheduleFound = await this.dailyScheduleRepository.findOne({
-        where: { planning: { id: dto.planningId }, day: dto.day },
+        where: { planning: { id: dto.planningId, campus: { id: campusId } }, day: dto.day },
         relations: ['planning'],
       });
       if (dailyScheduleFound) {
@@ -52,7 +55,7 @@ export class DailyScheduleService {
 
       if (!planning) throw new NotFoundException('Planning not found');
 
-      const teachers = await this.teacherService.findByIds(dto.teacherIds);
+      const teachers = await this.teacherService.findByIds(dto.teacherIds, campusId);
 
       const dayIndex = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 }[dto.day];
       const baseDate = new Date(planning.startDate);
@@ -61,7 +64,7 @@ export class DailyScheduleService {
 
       scheduleDate.setHours(0, 0, 0, 0);
 
-      const allStudents = await this.studentService.findByIds(dto.studentIds);
+      const allStudents = await this.studentService.findByIds(dto.studentIds, campusId);
 
       const students = allStudents.filter((s) => {
         const hasStart = !!s.startDateOfClasses;
@@ -84,7 +87,7 @@ export class DailyScheduleService {
       });
 
       if (dto.transitionStudentIds && dto.transitionStudentIds.length > 0) {
-        const transitionStudents = await this.studentService.findByIds(dto.transitionStudentIds);
+        const transitionStudents = await this.studentService.findByIds(dto.transitionStudentIds, campusId);
 
         for (const ts of transitionStudents) {
           const hasEnd = !!ts.endDateOfClasses;
@@ -142,19 +145,22 @@ export class DailyScheduleService {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
   }
 
-  async findOne(id: number): Promise<DailyScheduleEntity | null> {
+  async findOne(user: AuthUser, id: number): Promise<DailyScheduleEntity | null> {
     return await this.dailyScheduleRepository.findOne({
-      where: { id },
+      where: { id, planning: { campus: { id: user.campusId } } },
       relations: ['planning', 'teachers', 'students', 'planning.class', 'teachers.user', 'planning.campus'],
     });
   }
 
-  async findAll(date?: string): Promise<DailyScheduleEntity[]> {
+  async findAll(user: AuthUser, date?: string): Promise<DailyScheduleEntity[]> {
+    const campusId = user.campusId;
+
     const query = this.dailyScheduleRepository
       .createQueryBuilder('daily')
       .leftJoinAndSelect('daily.planning', 'planning')
       .leftJoinAndSelect('planning.class', 'class')
       .leftJoin('planning.campus', 'campus')
+      .andWhere('planning.campus.id = :campusId', { campusId })
       .addSelect(['campus.id', 'campus.name']);
 
     // 🔥 FILTRO OPCIONAL
@@ -175,6 +181,7 @@ export class DailyScheduleService {
       .leftJoin('teacher.user', 'user')
       .addSelect(['teacher.id', 'user.id', 'user.firstName', 'user.lastName', 'user.email'])
       .where('daily.id IN (:...ids)', { ids: scheduleIds })
+      .andWhere('teacher.campus.id = :campusId', { campusId })
       .getMany();
 
     // 🥉 Paso 3 — cargar students aparte
@@ -183,6 +190,7 @@ export class DailyScheduleService {
       .leftJoin('daily.students', 'student')
       .addSelect(['student.id', 'student.firstName', 'student.lastName', 'student.daysEnrolled'])
       .where('daily.id IN (:...ids)', { ids: scheduleIds })
+      .andWhere('student.campus.id = :campusId', { campusId })
       .getMany();
 
     // 🧩 Paso 4 — unir en memoria
@@ -204,22 +212,23 @@ export class DailyScheduleService {
     return schedules;
   }
 
-  async update(id: number, updateData: UpdateDailyScheduleDto): Promise<DailyScheduleEntity> {
+  async update(user: AuthUser, id: number, updateData: UpdateDailyScheduleDto): Promise<DailyScheduleEntity> {
     try {
+      const campusId = user.campusId;
       const dailyScheduleFound = await this.dailyScheduleRepository.findOne({
-        where: { id },
+        where: { id, planning: { campus: { id: campusId } } },
         relations: ['planning', 'teachers', 'students', 'planning.class'],
       });
       if (!dailyScheduleFound) throw new BadRequestException('Daily schedule not found');
 
       if (updateData.planningId) {
-        const planning = await this.planningService.findOne(updateData.planningId);
+        const planning = await this.planningService.findOneAndCampus(updateData.planningId, campusId);
         if (!planning) throw new NotFoundException('Planning not found');
         dailyScheduleFound.planning = planning;
       }
 
       if (updateData.teacherIds) {
-        const teachers = await this.teacherService.findByIds(updateData.teacherIds);
+        const teachers = await this.teacherService.findByIds(updateData.teacherIds, campusId);
         if (!teachers || teachers.length === 0) throw new NotFoundException('Teachers not found');
         dailyScheduleFound.teachers = teachers;
       }
@@ -241,7 +250,7 @@ export class DailyScheduleService {
       scheduleDate.setHours(0, 0, 0, 0);
 
       if (updateData.studentIds) {
-        const allStudents = await this.studentService.findByIds(updateData.studentIds);
+        const allStudents = await this.studentService.findByIds(updateData.studentIds, campusId);
         if (!allStudents || allStudents.length === 0) throw new NotFoundException('Students not found');
 
         const students = allStudents.filter((s) => {
@@ -316,8 +325,8 @@ export class DailyScheduleService {
     }
   }
 
-  async remove(id: number): Promise<void> {
-    const deleteResult = await this.dailyScheduleRepository.delete({ id });
+  async remove(user: AuthUser, id: number): Promise<void> {
+    const deleteResult = await this.dailyScheduleRepository.delete({ id, planning: { campus: { id: user.campusId } } });
     if (deleteResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }

@@ -17,6 +17,8 @@ import { TeacherService } from '../services/teacher.service';
 import { AuthGuard } from '../../../helpers/guards/auth.guard';
 import { UserRole } from '../../../shared/enums/user-role.enum';
 import { Roles } from '../../../helpers/decorators/roles.decorator';
+import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
+import { User } from '../../../helpers/decorators/user.decorator';
 
 @ApiTags('Teachers')
 @Controller('teachers')
@@ -26,38 +28,35 @@ export class TeacherController {
   @Post()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
-  async create(@Body() body: CreateTeacherDto) {
-    return this.teacherService.create(body);
+  async create(@User() user: AuthUser, @Body() body: CreateTeacherDto) {
+    return this.teacherService.create(user, body);
   }
 
   @Get()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findAll() {
-    return this.teacherService.findAll();
+  async findAll(@User() user: AuthUser) {
+    return this.teacherService.findAll(user);
   }
 
   @Get(':teacherId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findOne(@Param('teacherId') id: number) {
-    return this.teacherService.findOne(id);
+  async findOne(@User() user: AuthUser, @Param('teacherId') id: number) {
+    return this.teacherService.findOne(user, id);
   }
 
   @Patch(':teacherId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
-  async update(@Param('teacherId') id: number, @Body() body: UpdateTeacherDto) {
-    return this.teacherService.update(id, body);
+  async update(@User() user: AuthUser, @Param('teacherId') id: number, @Body() body: UpdateTeacherDto) {
+    return this.teacherService.update(user, id, body);
   }
 
   @Delete(':teacherId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
-  async remove(@Param('teacherId') id: number) {
-    return this.teacherService.remove(id);
+  async remove(@User() user: AuthUser, @Param('teacherId') id: number) {
+    return this.teacherService.remove(user, id);
   }
 }

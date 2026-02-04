@@ -23,6 +23,8 @@ import { UserRole } from '../../../shared/enums/user-role.enum';
 import { Roles } from '../../../helpers/decorators/roles.decorator';
 import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { Multer } from 'multer';
+import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
+import { User } from '../../../helpers/decorators/user.decorator';
 
 @ApiTags('Students')
 @Controller('students')
@@ -46,6 +48,7 @@ export class StudentController {
     type: CreateStudentDto,
   })
   async create(
+    @User() user: AuthUser,
     @Body() body: CreateStudentDto,
     @UploadedFiles()
     files: {
@@ -54,7 +57,11 @@ export class StudentController {
       imageContactSecondary?: Multer.File[];
     },
   ) {
+    if (body.campus !== user.campusId) {
+      throw new Error('Unauthorized');
+    }
     return this.studentService.create(
+      user,
       body,
       files.image?.[0],
       files.imageContactPrimary?.[0],
@@ -65,21 +72,23 @@ export class StudentController {
   @Get()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findByParams(@Query(new ValidationPipe({ transform: true })) query: FindStudentDtoQuery) {
-    return this.studentService.findByParams(query);
+  async findByParams(
+    @User() user: AuthUser,
+    @Query(new ValidationPipe({ transform: true })) query: FindStudentDtoQuery,
+  ) {
+    return this.studentService.findByParams(user, query);
   }
 
   @Get(':studentId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findOne(@Param('studentId') id: number) {
-    return this.studentService.findOne(id);
+  async findOne(@User() user: AuthUser, @Param('studentId') id: number) {
+    return this.studentService.findOne(user, id);
   }
 
   @Patch(':studentId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'image', maxCount: 1 },
@@ -93,6 +102,7 @@ export class StudentController {
     type: UpdateStudentDto,
   })
   async update(
+    @User() user: AuthUser,
     @Param('studentId') id: number,
     @Body() body: UpdateStudentDto,
     @UploadedFiles()
@@ -103,6 +113,7 @@ export class StudentController {
     },
   ) {
     return this.studentService.update(
+      user,
       id,
       body,
       files.image?.[0],
@@ -114,8 +125,7 @@ export class StudentController {
   @Delete(':studentId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
-  async remove(@Param('studentId') id: number) {
-    return this.studentService.remove(id);
+  async remove(@User() user: AuthUser, @Param('studentId') id: number) {
+    return this.studentService.remove(user, id);
   }
 }

@@ -23,6 +23,7 @@ import { WeekDayEnum } from '../../../shared/enums/week-day.enum';
 import { DailyScheduleEntity } from '../../daily-schedule/entities/daily-schedule.entity';
 import { ClassType } from '../../../shared/enums/class-type.enum';
 import { ClassEntity } from '../../class/entities/class.entity';
+import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
 
 @Injectable()
 export class StudentService {
@@ -43,6 +44,7 @@ export class StudentService {
   }
 
   async create(
+    user: AuthUser,
     dto: CreateStudentDto,
     image?: Multer.File,
     imageContactPrimary?: Multer.File,
@@ -72,9 +74,9 @@ export class StudentService {
 
       const additionalPrograms = await this.additionalProgramService.findByIds(dto.additionalProgramIds);
 
-      const classes = await this.classService.findByIds(dto.classIds);
+      const classes = await this.classService.findByIds(dto.classIds, user.campusId);
 
-      const classesTransition = await this.classService.findByIds(dto.classIdsTransition);
+      const classesTransition = await this.classService.findByIds(dto.classIdsTransition, user.campusId);
 
       const newEntity = plainToClass(StudentEntity, {
         ...dto,
@@ -323,7 +325,7 @@ export class StudentService {
     return false;
   };
 
-  async findByParams(query: FindStudentDtoQuery): Promise<any[]> {
+  async findByParams(user: AuthUser, query: FindStudentDtoQuery): Promise<any[]> {
     const queryBuilder = this.repository
       .createQueryBuilder('student')
       .leftJoinAndSelect('student.campus', 'campus')
@@ -347,8 +349,8 @@ export class StudentService {
         'classCampusTransition.name',
       ]);
 
-    if (query.campusId) {
-      queryBuilder.where('campus.id = :campusId', { campusId: query.campusId });
+    if (user.campusId) {
+      queryBuilder.where('campus.id = :campusId', { campusId: user.campusId });
     }
 
     if (query.dayEnrolled) {
@@ -371,7 +373,7 @@ export class StudentService {
     return students.map((student) => instanceToPlain(student));
   }
 
-  async findOne(id: number): Promise<any> {
+  async findOne(user: AuthUser, id: number): Promise<any> {
     const student = await this.repository
       .createQueryBuilder('student')
       .leftJoinAndSelect('student.campus', 'campus')
@@ -395,6 +397,7 @@ export class StudentService {
         'classCampusTransition.name',
       ])
       .where('student.id = :id', { id })
+      .andWhere('campus.id = :campusId', { campusId: user.campusId })
       .getOne();
 
     return student ? instanceToPlain(student) : null;
@@ -410,6 +413,7 @@ export class StudentService {
   }
 
   async update(
+    user: AuthUser,
     id: number,
     updateData: UpdateStudentDto,
     image?: Multer.File,
@@ -486,7 +490,9 @@ export class StudentService {
       }
 
       if ((updateData.classIds !== undefined && updateData.classIds.length >= 0) || classesIds.length > 0) {
-        const classes = updateData.classIds ? await this.classService.findByIds(updateData.classIds) : classesIds;
+        const classes = updateData.classIds
+          ? await this.classService.findByIds(updateData.classIds, user.campusId)
+          : classesIds;
 
         const removedClasses = student.classes.filter((oldC) => !classes.some((newC) => newC.id === oldC.id));
 
@@ -627,7 +633,7 @@ export class StudentService {
         classesTransitionIds.length > 0
       ) {
         const classesTransition = updateData.classIdsTransition
-          ? await this.classService.findByIds(updateData.classIdsTransition)
+          ? await this.classService.findByIds(updateData.classIdsTransition, user.campusId)
           : classesTransitionIds;
 
         await this.handleUpdateStudentScheduleTransition(student, classesTransition, updateData);
@@ -797,15 +803,15 @@ export class StudentService {
     await Promise.all([...addPromises, ...removePromises]);
   }
 
-  async remove(id: number): Promise<void> {
-    const deleteResult = await this.repository.delete({ id });
+  async remove(user: AuthUser, id: number): Promise<void> {
+    const deleteResult = await this.repository.delete({ id, campus: { id: user.campusId } });
     if (deleteResult.affected === 0) {
       throw new NotFoundException('Student not found');
     }
   }
 
-  async findByIds(ids: number[]): Promise<StudentEntity[]> {
-    const students = await this.repository.findBy({ id: In(ids) });
+  async findByIds(ids: number[], campusId: number): Promise<StudentEntity[]> {
+    const students = await this.repository.findBy({ id: In(ids), campus: { id: campusId } });
 
     return students.map((student) => instanceToPlain(student)) as StudentEntity[];
   }

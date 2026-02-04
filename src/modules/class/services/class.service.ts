@@ -6,6 +6,7 @@ import { ClassDto, CreateClassDto, UpdateClassDto } from '../dto/class.dto';
 import { plainToClass } from 'class-transformer';
 import { StorageService } from '../../../shared/storage/storage.service';
 import { Multer } from 'multer';
+import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
 
 @Injectable()
 export class ClassService {
@@ -19,7 +20,7 @@ export class ClassService {
     return await this.repository.save(entity);
   }
 
-  async create(dto: ClassDto, image?: Multer.File): Promise<ClassEntity> {
+  async create(user: AuthUser, dto: ClassDto, image?: Multer.File): Promise<ClassEntity> {
     let imageUrl: string | null = null;
 
     if (image) {
@@ -39,9 +40,9 @@ export class ClassService {
     });
   }
 
-  async findOne(id: number): Promise<ClassEntity | null> {
+  async findOne(user: AuthUser, id: number): Promise<ClassEntity | null> {
     return await this.repository.findOne({
-      where: { id },
+      where: { id, campus: { id: user.campusId } },
       relations: ['campus', 'students', 'studentsTransition', 'teachers'],
     });
   }
@@ -53,7 +54,7 @@ export class ClassService {
     });
   }
 
-  async update(id: number, updateData: UpdateClassDto, image?: Multer.File): Promise<void> {
+  async update(user: AuthUser, id: number, updateData: UpdateClassDto, image?: Multer.File): Promise<void> {
     let imageUrl: string | undefined;
 
     if (image) {
@@ -61,20 +62,23 @@ export class ClassService {
       updateData.image = imageUrl;
     }
 
-    const updateResult = await this.repository.update({ id }, plainToClass(ClassEntity, updateData));
+    const updateResult = await this.repository.update(
+      { id, campus: { id: user.campusId } },
+      plainToClass(ClassEntity, updateData),
+    );
     if (updateResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }
   }
 
-  async remove(id: number): Promise<void> {
-    const deleteResult = await this.repository.delete({ id });
+  async remove(user: AuthUser, id: number): Promise<void> {
+    const deleteResult = await this.repository.delete({ id, campus: { id: user.campusId } });
     if (deleteResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }
   }
 
-  async findByIds(ids: number[]): Promise<ClassEntity[]> {
-    return await this.repository.findBy({ id: In(ids) });
+  async findByIds(ids: number[], campusId: number): Promise<ClassEntity[]> {
+    return await this.repository.findBy({ id: In(ids), campus: { id: campusId } });
   }
 }

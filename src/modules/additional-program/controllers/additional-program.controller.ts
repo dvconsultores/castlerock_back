@@ -32,7 +32,7 @@ export class AdditionalProgramController {
   constructor(private readonly additionalProgramService: AdditionalProgramService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -55,7 +55,7 @@ export class AdditionalProgramController {
   }
 
   @Patch(':additionalProgramId')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -72,7 +72,7 @@ export class AdditionalProgramController {
   }
 
   @Delete(':additionalProgramId')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   async remove(@User() user: AuthUser, @Param('additionalProgramId') id: number) {
     return this.additionalProgramService.remove(user, id);
   }

@@ -31,7 +31,7 @@ export class PlanningController {
   @Post()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   async create(@Body() body: CreatePlanningDto, @User() user: AuthUser) {
     if (body.week) {
       return this.planningService.create(user, body, user.id);
@@ -88,7 +88,7 @@ export class PlanningController {
   @Patch(':planningId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   async update(@User() user: AuthUser, @Param('planningId') id: number, @Body() body: UpdatePlanningDto) {
     return this.planningService.update(user, id, body);
   }
@@ -96,7 +96,7 @@ export class PlanningController {
   @Delete(':planningId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   async remove(@User() user: AuthUser, @Param('planningId') id: number) {
     return this.planningService.remove(user, id);
   }

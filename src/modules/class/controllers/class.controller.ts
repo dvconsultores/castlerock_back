@@ -51,7 +51,7 @@ export class ClassController {
     if (campusId && campusId !== user.campusId) {
       throw new Error('Unauthorized');
     }
-    return this.classService.findAll(campusId);
+    return this.classService.findAll(user.campusId || campusId);
   }
 
   @Get(':classId')

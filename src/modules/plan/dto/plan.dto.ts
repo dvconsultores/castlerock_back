@@ -1,11 +1,7 @@
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, IsNumber, IsEnum, IsOptional, IsPositive, IsArray } from 'class-validator';
 import { PlanStatus } from '../../../shared/enums/plan-status.enum';
-
-export enum BillingCycle {
-  MONTHLY = 'monthly',
-  YEARLY = 'yearly',
-}
+import { BillingCycle } from '../entities/plan.entity';
 
 export class CreatePlanDto {
   @ApiProperty({ example: 'Plan Premium' })
@@ -13,14 +9,8 @@ export class CreatePlanDto {
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ example: 'Ideal para escuelas grandes con más de 500 alumnos' })
-  @IsString()
-  @IsNotEmpty()
-  description: string;
-
   @ApiProperty({ example: 99.99 })
   @IsNumber({ maxDecimalPlaces: 2 })
-  @IsPositive()
   @IsNotEmpty()
   price: number;
 
@@ -33,15 +23,6 @@ export class CreatePlanDto {
   @IsEnum(BillingCycle)
   @IsNotEmpty()
   billingCycle: BillingCycle;
-
-  @ApiProperty({
-    example: ['Soporte 24/7', 'Alumnos ilimitados'],
-    description: 'Lista de beneficios del plan',
-  })
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  features?: string[];
 
   @ApiProperty({
     example: 'price_1P2x3y4z',

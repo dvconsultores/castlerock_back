@@ -19,7 +19,7 @@ export class SubscriptionEntity {
   @Column({
     type: 'enum',
     enum: SubscriptionStatus,
-    default: SubscriptionStatus.TRIAL,
+    default: SubscriptionStatus.ACTIVE,
   })
   status: SubscriptionStatus;
 

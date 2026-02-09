@@ -20,10 +20,11 @@ import { UserRole } from '../../shared/enums/user-role.enum';
 import { CampusEntity } from '../campus/entities/campus.entity';
 import { AppLogger } from '../../shared/logger/app-logger';
 import { MailService } from '../../shared/mail/mail.service';
-import { DataSource } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { SubscriptionEntity } from '../subscription/entities/subscription.entity';
-import { PlanEntity } from '../plan/entities/plan.entity';
+import { BillingCycle, PlanEntity } from '../plan/entities/plan.entity';
 import { SubscriptionStatus } from '../../shared/enums/subscription-status.enum';
+import { PlanService } from '../plan/services/plan.service';
 
 @Injectable()
 export class AuthService {
@@ -34,6 +35,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
     private readonly dataSource: DataSource,
+    private readonly planService: PlanService,
   ) {}
 
   private async validateUser(email: string, password: string): Promise<UserEntity | null> {
@@ -159,7 +161,7 @@ export class AuthService {
     return { message: 'Password reset successfully' };
   }
 
-  async registerSchool(dto: RegisterSchoolDto) {
+  async registerSchool2(dto: RegisterSchoolDto) {
     // 1. Validar si el usuario ya existe antes de abrir transacción (ahorra recursos)
     const existingUser = await this.userService.findOneByEmail(dto.email);
 
@@ -212,7 +214,7 @@ export class AuthService {
       const newSubscription = subRepo.create({
         campus: savedCampus,
         plan: plan,
-        status: SubscriptionStatus.TRIAL, // O ACTIVE si cobras luego
+        status: SubscriptionStatus.ACTIVE,
         startDate: new Date(),
         nextBillingDate: new Date(new Date().setDate(new Date().getDate() + 30)), // +30 días de prueba
       });
@@ -255,6 +257,169 @@ export class AuthService {
       throw new InternalServerErrorException('Error registering school');
     } finally {
       // Liberar conexión
+      await queryRunner.release();
+    }
+  }
+
+  async registerSchool(dto: RegisterSchoolDto) {
+    // 1. Validar usuario
+    const existingUser = await this.userService.findOneByEmail(dto.email);
+
+    if (existingUser) {
+      throw new ConflictException('The email is already in use');
+    }
+
+    // 2. Buscar plan (ANTES de Stripe / TX)
+    const plan = await this.planService.findOne(dto.planId);
+
+    if (!plan) throw new NotFoundException('Plan not found');
+
+    // 3. Variables Stripe
+    let stripeCustomerId: string | undefined = undefined;
+    let stripeSubscriptionId: string | undefined = undefined;
+    let nextBillingDate: Date;
+
+    /* ============================
+     CASO TRIAL
+  ============================ */
+    if (plan.billingCycle === BillingCycle.TRIAL) {
+      nextBillingDate = new Date();
+      nextBillingDate.setDate(nextBillingDate.getDate() + 15);
+    } else {
+      /* ============================
+     CASO PAGO
+  ============================ */
+      if (!dto.paymentMethodId) {
+        throw new BadRequestException('Payment method is required');
+      }
+
+      if (!plan.externalPriceId) {
+        throw new InternalServerErrorException('Plan is not linked with Stripe');
+      }
+
+      try {
+        // /* 1️⃣ Crear Customer */
+        // const customer = await this.stripeService.client.customers.create({
+        //   email: dto.email,
+        //   name: dto.schoolName,
+        //   payment_method: dto.paymentMethodId,
+        //   invoice_settings: {
+        //     default_payment_method: dto.paymentMethodId,
+        //   },
+        // });
+
+        // stripeCustomerId = customer.id;
+
+        // /* 2️⃣ Crear Subscription */
+        // const subscription = await this.stripeService.client.subscriptions.create({
+        //   customer: customer.id,
+        //   items: [
+        //     {
+        //       price: plan.externalPriceId,
+        //     },
+        //   ],
+        //   expand: ['latest_invoice.payment_intent'],
+        // });
+
+        // stripeSubscriptionId = subscription.id;
+
+        // example
+        const subscription = {
+          id: 'sub_123456789',
+          current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // +30 días
+        };
+
+        /* 3️⃣ Fecha real desde Stripe */
+        nextBillingDate = new Date(subscription.current_period_end * 1000);
+      } catch (error) {
+        console.error('Stripe error:', error);
+        throw new BadRequestException('Payment failed');
+      }
+    }
+
+    /* ============================
+     TRANSACCIÓN DB
+  ============================ */
+
+    const queryRunner = this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const userRepo = queryRunner.manager.getRepository(UserEntity);
+      const campusRepo = queryRunner.manager.getRepository(CampusEntity);
+      const subRepo = queryRunner.manager.getRepository(SubscriptionEntity);
+
+      /* A. Usuario */
+      const newUser = userRepo.create({
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        email: dto.email,
+        password: dto.password,
+        phone: dto.phone,
+        role: UserRole.OWNER,
+      });
+
+      const savedUser = await userRepo.save(newUser);
+
+      /* B. Campus */
+      const newCampus = campusRepo.create({
+        name: dto.schoolName,
+        address: dto.schoolAddress,
+        phone: dto.schoolPhone,
+        nickname: dto.schoolName.substring(0, 3).toUpperCase(),
+        image: '',
+        users: [savedUser],
+        stripeCustomerId,
+      });
+
+      const savedCampus = await campusRepo.save(newCampus);
+
+      /* C. Subscription */
+      const newSubscription = subRepo.create({
+        campus: savedCampus,
+        plan,
+        status: SubscriptionStatus.ACTIVE,
+        startDate: new Date(),
+        nextBillingDate,
+        externalSubscriptionId: stripeSubscriptionId,
+      });
+
+      await subRepo.save(newSubscription);
+
+      /* D. Commit */
+      await queryRunner.commitTransaction();
+
+      /* E. JWT */
+      const payload = {
+        id: savedUser.id,
+        email: savedUser.email,
+        role: savedUser.role,
+        campusId: savedCampus.id,
+      };
+
+      return {
+        id: savedUser.id,
+        email: savedUser.email,
+        role: savedUser.role,
+        image: savedUser.image,
+        accessToken: this.jwtService.sign(payload, {
+          expiresIn: '7d',
+        }),
+        campus: {
+          id: savedCampus.id,
+          name: savedCampus.name,
+          nickname: savedCampus.nickname,
+        },
+      };
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+
+      console.error(err);
+
+      throw new InternalServerErrorException('Error registering school');
+    } finally {
       await queryRunner.release();
     }
   }

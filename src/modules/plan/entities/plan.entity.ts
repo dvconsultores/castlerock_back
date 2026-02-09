@@ -2,6 +2,13 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } f
 import { SubscriptionEntity } from '../../subscription/entities/subscription.entity';
 import { PlanStatus } from '../../../shared/enums/plan-status.enum';
 
+// enum billingCycle: 'monthly' | 'yearly'
+export enum BillingCycle {
+  MONTHLY = 'monthly',
+  YEARLY = 'yearly',
+  TRIAL = 'trial',
+}
+
 @Entity({ name: 'plans' })
 export class PlanEntity {
   @PrimaryGeneratedColumn()
@@ -16,8 +23,12 @@ export class PlanEntity {
   @Column()
   currency: string; // Ej: "USD", "MXN"
 
-  @Column()
-  billingCycle: 'monthly' | 'yearly';
+  @Column({
+    type: 'enum',
+    enum: BillingCycle,
+    nullable: false,
+  })
+  billingCycle: BillingCycle;
 
   //status enum StatusPlan
   @Column({

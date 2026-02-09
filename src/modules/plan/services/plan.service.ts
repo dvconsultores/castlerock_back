@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PlanEntity } from '../entities/plan.entity';
 import { CreatePlanDto } from '../dto/plan.dto';
+import { PlanStatus } from '../../../shared/enums/plan-status.enum';
 
 @Injectable()
 export class PlanService {
@@ -27,6 +28,10 @@ export class PlanService {
 
   async findAll(): Promise<PlanEntity[]> {
     return await this.repository.find();
+  }
+
+  async findAllIsActive(): Promise<PlanEntity[]> {
+    return await this.repository.find({ where: { status: PlanStatus.ACTIVE }, order: { price: 'ASC' } });
   }
 
   async update(id: number, updateData: Partial<PlanEntity>): Promise<void> {

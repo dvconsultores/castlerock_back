@@ -40,7 +40,7 @@ export class CampusEntity {
   subscriptions: SubscriptionEntity[];
 
   @Column({ nullable: true })
-  stripeCustomerId: string;
+  stripeCustomerId?: string;
 
   @OneToMany(() => ClassEntity, (classEntity) => classEntity.campus)
   classes: ClassEntity[];

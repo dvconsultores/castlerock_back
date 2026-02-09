@@ -27,6 +27,10 @@ export class SubscriptionService {
     });
   }
 
+  async findByFilter(filter: any): Promise<SubscriptionEntity[]> {
+    return await this.repository.find(filter);
+  }
+
   async update(id: number, updateData: Partial<SubscriptionEntity>): Promise<void> {
     const updateResult = await this.repository.update({ id }, updateData);
     if (updateResult.affected === 0) {
@@ -38,6 +42,16 @@ export class SubscriptionService {
     const deleteResult = await this.repository.delete({ id });
     if (deleteResult.affected === 0) {
       throw new NotFoundException('Item no encontrado');
+    }
+  }
+
+  async findOneByCampusId(campusId: number): Promise<SubscriptionEntity | null> {
+    try {
+      return await this.repository.findOne({
+        where: { campus: { id: campusId } },
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Error al buscar la suscripción por campusId');
     }
   }
 }

@@ -87,4 +87,9 @@ export class RegisterSchoolDto {
   @IsNumber()
   @IsNotEmpty()
   planId: number;
+
+  @ApiProperty()
+  @IsOptional()
+  @IsString()
+  paymentMethodId?: string; // ID del método de pago (Stripe/MercadoPago)
 }

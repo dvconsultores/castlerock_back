@@ -37,7 +37,7 @@ export class PlanController {
   // @UseGuards(AuthGuard)
   // @ApiBearerAuth()
   async findAll() {
-    return this.planService.findAll();
+    return this.planService.findAllIsActive();
   }
 
   // @Get(':planId')

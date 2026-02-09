@@ -5,6 +5,8 @@ import { ConfigService } from '@nestjs/config';
 import { EnvironmentVariables } from '../../config/env';
 import { Reflector } from '@nestjs/core';
 import { UserRole } from '../../shared/enums/user-role.enum';
+import { SubscriptionService } from '../../modules/subscription/services/subscription.service';
+import { SubscriptionStatus } from '../../shared/enums/subscription-status.enum';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -12,6 +14,7 @@ export class AuthGuard implements CanActivate {
     private jwtService: JwtService,
     private readonly configService: ConfigService<EnvironmentVariables>,
     private readonly reflector: Reflector,
+    private readonly subscriptionService: SubscriptionService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -50,11 +53,23 @@ export class AuthGuard implements CanActivate {
         throw new UnauthorizedException('No autorizado - Campus no encontrado');
       }
 
+      if (payload.role !== UserRole.ADMIN) {
+        const subscription = await this.subscriptionService.findOneByCampusId(payload.campusId);
+
+        if (!subscription) {
+          throw new UnauthorizedException('No autorizado - Suscripción no encontrada');
+        }
+
+        if (subscription.status !== SubscriptionStatus.ACTIVE) {
+          throw new UnauthorizedException('No autorizado - Suscripción inactiva');
+        }
+      }
+
       request['user'] = payload;
 
       return true;
-    } catch (error) {
-      throw new UnauthorizedException('Token inválido');
+    } catch (error: any) {
+      throw new UnauthorizedException(error.message || 'Token inválido');
     }
   }
 }

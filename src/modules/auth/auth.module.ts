@@ -7,7 +7,7 @@ import { CampusModule } from '../campus/campus.module';
 import { TeacherModule } from '../teacher/teacher.module';
 import { PlanModule } from '../plan/plan.module';
 import { SubscriptionModule } from '../subscription/subscription.module';
-import { StripeService } from '../../providers/stripe.service';
+import { WebhookModule } from '../webhook/webhook.module';
 
 @Module({
   imports: [
@@ -21,8 +21,9 @@ import { StripeService } from '../../providers/stripe.service';
     TeacherModule,
     PlanModule,
     SubscriptionModule,
+    WebhookModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, StripeService],
+  providers: [AuthService],
 })
 export class AuthModule {}

@@ -195,10 +195,7 @@ export class AuthService {
       const paymentMethod = await this.stripeService.getClient().paymentMethods.create({
         type: 'card',
         card: {
-          number: '4242424242424242',
-          exp_month: 12,
-          exp_year: 2034,
-          cvc: '123',
+          token: 'tok_visa', // 👈 tarjeta 4242
         },
       });
 
@@ -225,6 +222,8 @@ export class AuthService {
           },
         });
 
+        console.log('Created Stripe customer:', customer);
+
         stripeCustomerId = customer.id;
 
         /* 2️⃣ Crear Subscription */
@@ -238,6 +237,7 @@ export class AuthService {
           expand: ['latest_invoice.payment_intent'],
         })) as any;
 
+        console.log('Created Stripe subscription:', subscription);
         stripeSubscriptionId = subscription.id;
 
         /* 3️⃣ Fecha real desde Stripe */

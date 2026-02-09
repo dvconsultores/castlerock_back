@@ -32,14 +32,20 @@ export class WebhookController {
   @Post('stripe/webhook')
   handleWebhook(@Req() req: Request) {
     const signature = req.headers['stripe-signature'] as string;
-    const event = this.stripeService.constructWebhookEvent(req.body, signature);
 
-    console.log('Received Stripe webhook event:', event);
+    const event = this.stripeService.constructWebhookEvent(
+      req.body, // 👈 Buffer
+      signature,
+    );
+
+    console.log('Received Stripe webhook:', event.type);
 
     switch (event.type) {
       case 'invoice.payment_succeeded':
         // activar cuenta
         break;
     }
+
+    return { received: true };
   }
 }

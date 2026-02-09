@@ -5,7 +5,7 @@ import { StripeService } from '../../providers/stripe.service';
 
 @Module({
   imports: [],
-  exports: [],
+  exports: [StripeService],
   controllers: [WebhookController],
   providers: [StripeService],
 })

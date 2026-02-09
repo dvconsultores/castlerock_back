@@ -25,6 +25,8 @@ import { SubscriptionEntity } from '../subscription/entities/subscription.entity
 import { BillingCycle, PlanEntity } from '../plan/entities/plan.entity';
 import { SubscriptionStatus } from '../../shared/enums/subscription-status.enum';
 import { PlanService } from '../plan/services/plan.service';
+import { StripeService } from '../../providers/stripe.service';
+import Stripe from 'stripe';
 
 @Injectable()
 export class AuthService {
@@ -36,6 +38,7 @@ export class AuthService {
     private readonly mailService: MailService,
     private readonly dataSource: DataSource,
     private readonly planService: PlanService,
+    private readonly stripeService: StripeService,
   ) {}
 
   private async validateUser(email: string, password: string): Promise<UserEntity | null> {
@@ -161,106 +164,6 @@ export class AuthService {
     return { message: 'Password reset successfully' };
   }
 
-  async registerSchool2(dto: RegisterSchoolDto) {
-    // 1. Validar si el usuario ya existe antes de abrir transacción (ahorra recursos)
-    const existingUser = await this.userService.findOneByEmail(dto.email);
-
-    if (existingUser) {
-      throw new ConflictException('The email is already in use');
-    }
-
-    // 2. Iniciar Transacción
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      // Obtenemos los repositorios DESDE el manager de la transacción
-      const userRepo = queryRunner.manager.getRepository(UserEntity);
-      const campusRepo = queryRunner.manager.getRepository(CampusEntity);
-      const subRepo = queryRunner.manager.getRepository(SubscriptionEntity);
-      const planRepo = queryRunner.manager.getRepository(PlanEntity);
-
-      // A. Buscar el Plan
-      const plan = await planRepo.findOne({ where: { id: dto.planId } });
-
-      if (!plan) throw new NotFoundException('Plan not found');
-
-      // B. Crear Usuario (Owner)
-      const newUser = userRepo.create({
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        email: dto.email,
-        password: dto.password,
-        phone: dto.phone,
-        role: UserRole.OWNER,
-      });
-
-      const savedUser = await userRepo.save(newUser);
-
-      // C. Crear Campus
-      const newCampus = campusRepo.create({
-        name: dto.schoolName,
-        address: dto.schoolAddress,
-        phone: dto.schoolPhone,
-        nickname: dto.schoolName.substring(0, 3).toUpperCase(),
-        image: '', // O una imagen por defecto
-        users: [savedUser], // Vinculamos la relación
-      });
-
-      const savedCampus = await campusRepo.save(newCampus);
-
-      // D. Crear Suscripción (Trial o Pendiente)
-      const newSubscription = subRepo.create({
-        campus: savedCampus,
-        plan: plan,
-        status: SubscriptionStatus.ACTIVE,
-        startDate: new Date(),
-        nextBillingDate: new Date(new Date().setDate(new Date().getDate() + 30)), // +30 días de prueba
-      });
-
-      await subRepo.save(newSubscription);
-
-      // E. Confirmar Transacción
-      await queryRunner.commitTransaction();
-
-      // F. Retornar respuesta (similar al Login para entrar directo)
-      const payload = {
-        id: savedUser.id,
-        email: savedUser.email,
-        role: savedUser.role,
-        campusId: savedCampus.id,
-      };
-
-      return {
-        id: savedUser.id,
-        email: savedUser.email,
-        role: savedUser.role,
-        image: savedUser.image,
-        accessToken: this.jwtService.sign(payload, { expiresIn: '7d' }),
-        campus: {
-          id: savedCampus.id,
-          name: savedCampus.name,
-          nickname: savedCampus.nickname,
-        },
-        // message: 'School registered successfully',
-      };
-    } catch (err) {
-      // Si algo falla, revertimos TODO (no se crea usuario ni campus)
-      await queryRunner.rollbackTransaction();
-
-      // Relanzamos el error para que Nest lo maneje
-      if (err instanceof ConflictException || err instanceof NotFoundException) {
-        throw err;
-      }
-      console.error(err);
-      throw new InternalServerErrorException('Error registering school');
-    } finally {
-      // Liberar conexión
-      await queryRunner.release();
-    }
-  }
-
   async registerSchool(dto: RegisterSchoolDto) {
     // 1. Validar usuario
     const existingUser = await this.userService.findOneByEmail(dto.email);
@@ -289,6 +192,20 @@ export class AuthService {
       /* ============================
      CASO PAGO
   ============================ */
+      const paymentMethod = await this.stripeService.getClient().paymentMethods.create({
+        type: 'card',
+        card: {
+          number: '4242424242424242',
+          exp_month: 12,
+          exp_year: 2034,
+          cvc: '123',
+        },
+      });
+
+      console.log('Created payment method:', paymentMethod);
+
+      dto.paymentMethodId = paymentMethod.id;
+
       if (!dto.paymentMethodId) {
         throw new BadRequestException('Payment method is required');
       }
@@ -298,36 +215,30 @@ export class AuthService {
       }
 
       try {
-        // /* 1️⃣ Crear Customer */
-        // const customer = await this.stripeService.client.customers.create({
-        //   email: dto.email,
-        //   name: dto.schoolName,
-        //   payment_method: dto.paymentMethodId,
-        //   invoice_settings: {
-        //     default_payment_method: dto.paymentMethodId,
-        //   },
-        // });
+        /* 1️⃣ Crear Customer */
+        const customer = await this.stripeService.getClient().customers.create({
+          email: dto.email,
+          name: dto.schoolName,
+          payment_method: dto.paymentMethodId,
+          invoice_settings: {
+            default_payment_method: dto.paymentMethodId,
+          },
+        });
 
-        // stripeCustomerId = customer.id;
+        stripeCustomerId = customer.id;
 
-        // /* 2️⃣ Crear Subscription */
-        // const subscription = await this.stripeService.client.subscriptions.create({
-        //   customer: customer.id,
-        //   items: [
-        //     {
-        //       price: plan.externalPriceId,
-        //     },
-        //   ],
-        //   expand: ['latest_invoice.payment_intent'],
-        // });
+        /* 2️⃣ Crear Subscription */
+        const subscription = (await this.stripeService.getClient().subscriptions.create({
+          customer: customer.id,
+          items: [
+            {
+              price: plan.externalPriceId,
+            },
+          ],
+          expand: ['latest_invoice.payment_intent'],
+        })) as any;
 
-        // stripeSubscriptionId = subscription.id;
-
-        // example
-        const subscription = {
-          id: 'sub_123456789',
-          current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // +30 días
-        };
+        stripeSubscriptionId = subscription.id;
 
         /* 3️⃣ Fecha real desde Stripe */
         nextBillingDate = new Date(subscription.current_period_end * 1000);

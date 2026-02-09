@@ -28,6 +28,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { ReportModule } from './modules/report/report.module';
 import { PlanModule } from './modules/plan/plan.module';
 import { SubscriptionModule } from './modules/subscription/subscription.module';
+import { WebhookModule } from './modules/webhook/webhook.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { SubscriptionModule } from './modules/subscription/subscription.module';
     ReportModule,
     PlanModule,
     SubscriptionModule,
+    WebhookModule,
   ],
   controllers: [AppController],
   providers: [

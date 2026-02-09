@@ -7,6 +7,7 @@ import { CampusModule } from '../campus/campus.module';
 import { TeacherModule } from '../teacher/teacher.module';
 import { PlanModule } from '../plan/plan.module';
 import { SubscriptionModule } from '../subscription/subscription.module';
+import { StripeService } from '../../providers/stripe.service';
 
 @Module({
   imports: [
@@ -22,6 +23,6 @@ import { SubscriptionModule } from '../subscription/subscription.module';
     SubscriptionModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, StripeService],
 })
 export class AuthModule {}

@@ -45,8 +45,8 @@ export class UserController {
 
   @Get()
   @Roles(UserRole.ADMIN, UserRole.OWNER)
-  async findAll() {
-    return this.userService.findAll();
+  async findAll(@User() user: AuthUser) {
+    return this.userService.findAll(user);
   }
 
   @Get(':userId')

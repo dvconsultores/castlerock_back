@@ -58,6 +58,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    console.log('User logged in:', user);
+
     const payload: { id: number; email: string; role: UserRole; campusId?: number } = {
       id: user.id,
       email: user.email,
@@ -65,6 +67,8 @@ export class AuthService {
     };
 
     let campus: CampusEntity | null = null;
+
+    let subscription: SubscriptionEntity | null = null;
 
     if (user.role === UserRole.ADMIN) {
       // campus = await this.campusService.findOne(loginDto.campusId!);
@@ -91,6 +95,8 @@ export class AuthService {
         throw new NotFoundException('Campus not found for owner');
       }
 
+      subscription = campus.subscriptions[0] || null;
+
       payload.campusId = campus.id;
     } else {
       throw new BadRequestException('Unsupported user role for login');
@@ -107,6 +113,7 @@ export class AuthService {
         name: campus?.name,
         nickname: campus?.nickname,
       },
+      subscription: subscription,
     };
   }
 
@@ -192,16 +199,16 @@ export class AuthService {
       /* ============================
      CASO PAGO
   ============================ */
-      const paymentMethod = await this.stripeService.getClient().paymentMethods.create({
-        type: 'card',
-        card: {
-          token: 'tok_visa', // 👈 tarjeta 4242
-        },
-      });
+      // const paymentMethod = await this.stripeService.getClient().paymentMethods.create({
+      //   type: 'card',
+      //   card: {
+      //     token: 'tok_visa', // 👈 tarjeta 4242
+      //   },
+      // });
 
-      console.log('Created payment method:', paymentMethod);
+      // console.log('Created payment method:', paymentMethod);
 
-      dto.paymentMethodId = paymentMethod.id;
+      // dto.paymentMethodId = paymentMethod.id;
 
       if (!dto.paymentMethodId) {
         throw new BadRequestException('Payment method is required');

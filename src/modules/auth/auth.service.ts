@@ -199,16 +199,16 @@ export class AuthService {
       /* ============================
      CASO PAGO
   ============================ */
-      // const paymentMethod = await this.stripeService.getClient().paymentMethods.create({
-      //   type: 'card',
-      //   card: {
-      //     token: 'tok_visa', // 👈 tarjeta 4242
-      //   },
-      // });
+      const paymentMethod = await this.stripeService.getClient().paymentMethods.create({
+        type: 'card',
+        card: {
+          token: 'tok_visa', // 👈 tarjeta 4242
+        },
+      });
 
-      // console.log('Created payment method:', paymentMethod);
+      console.log('Created payment method:', paymentMethod);
 
-      // dto.paymentMethodId = paymentMethod.id;
+      dto.paymentMethodId = paymentMethod.id;
 
       if (!dto.paymentMethodId) {
         throw new BadRequestException('Payment method is required');

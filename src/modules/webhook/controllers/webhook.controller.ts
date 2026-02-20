@@ -38,7 +38,7 @@ export class WebhookController {
       signature,
     );
 
-    console.log('Received Stripe webhook:', event.type);
+    console.log('Received Stripe webhook:', event);
 
     switch (event.type) {
       case 'invoice.payment_succeeded':

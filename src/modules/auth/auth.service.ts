@@ -304,7 +304,7 @@ export class AuthService {
         externalSubscriptionId: stripeSubscriptionId,
       });
 
-      await subRepo.save(newSubscription);
+      const savedSubscription = await subRepo.save(newSubscription);
 
       /* D. Commit */
       await queryRunner.commitTransaction();
@@ -329,6 +329,11 @@ export class AuthService {
           id: savedCampus.id,
           name: savedCampus.name,
           nickname: savedCampus.nickname,
+        },
+        subscription: {
+          id: savedSubscription.id,
+          status: savedSubscription.status,
+          nextBillingDate: savedSubscription.nextBillingDate,
         },
       };
     } catch (err) {

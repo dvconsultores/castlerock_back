@@ -53,7 +53,7 @@ export class SubscriptionTasksService {
       }
 
       this.logger.log('✅ Revisión completada.');
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error('❌ Error revisando suscripciones', error.stack);
     }
   }

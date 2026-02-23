@@ -193,6 +193,14 @@ export class AuthService {
      CASO TRIAL
   ============================ */
     if (plan.billingCycle === BillingCycle.TRIAL) {
+      const customer = await this.stripeService.getClient().customers.create({
+        email: dto.email,
+        name: dto.schoolName,
+      });
+
+      stripeCustomerId = customer.id;
+
+      // 2) nextBillingDate trial
       nextBillingDate = new Date();
       nextBillingDate.setDate(nextBillingDate.getDate() + 15);
     } else {

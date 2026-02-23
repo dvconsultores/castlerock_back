@@ -59,10 +59,6 @@ export class AuthGuard implements CanActivate {
         if (!subscription) {
           throw new UnauthorizedException('No autorizado - Suscripción no encontrada');
         }
-
-        if (subscription.status !== SubscriptionStatus.ACTIVE) {
-          throw new UnauthorizedException('No autorizado - Suscripción inactiva');
-        }
       }
 
       request['user'] = payload;

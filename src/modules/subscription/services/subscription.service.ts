@@ -64,7 +64,7 @@ export class SubscriptionService {
   async findOneByCampusId(campusId: number): Promise<SubscriptionEntity | null> {
     try {
       return await this.repository.findOne({
-        where: { campus: { id: campusId } },
+        where: { campus: { id: campusId }, status: SubscriptionStatus.ACTIVE },
       });
     } catch (error) {
       throw new InternalServerErrorException('Error al buscar la suscripción por campusId');

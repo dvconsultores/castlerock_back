@@ -288,7 +288,7 @@ export class SubscriptionService {
       if (nextBillingDate) currentSub.nextBillingDate = nextBillingDate;
 
       // Si quieres permitir cambiar de plan al reactivar (solo DB):
-      currentSub.plan = newPlan;
+      // currentSub.plan = newPlan;
 
       await this.repository.save(currentSub);
 
@@ -317,7 +317,7 @@ export class SubscriptionService {
       currentSub.status = SubscriptionStatus.SUSPENDED;
     }
 
-    currentSub.plan = newPlan; // solo si permites cambiar de plan aquí
+    // currentSub.plan = newPlan; // solo si permites cambiar de plan aquí
     currentSub.nextBillingDate = new Date(stripeSub.current_period_end * 1000);
 
     await this.repository.save(currentSub);

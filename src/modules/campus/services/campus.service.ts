@@ -72,6 +72,7 @@ export class CampusService {
       .leftJoinAndSelect('campus.teachers', 'teacher')
       .leftJoinAndSelect('teacher.user', 'user')
       .leftJoinAndSelect('campus.subscriptions', 'subscription')
+      .leftJoinAndSelect('subscription.plan', 'plan')
       .select([
         'campus.id',
         'campus.name',
@@ -84,10 +85,14 @@ export class CampusService {
         'user.firstName',
         'user.lastName',
         'user.email',
+
         'subscription.id',
         'subscription.status',
-        'subscription.plan',
         'subscription.nextBillingDate',
+
+        'plan.id',
+        'plan.name',
+        'plan.billingCycle',
       ])
       .where('campus.id = :id', { id })
       .getOne();

@@ -68,7 +68,7 @@ export class AuthService {
 
     let campus: CampusEntity | null = null;
 
-    let subscription: SubscriptionEntity | null = null;
+    let subscription: any | null = null;
 
     if (user.role === UserRole.ADMIN) {
       // campus = await this.campusService.findOne(loginDto.campusId!);
@@ -76,6 +76,10 @@ export class AuthService {
       //   throw new NotFoundException('Campus not found for owner');
       // }
       // payload.campusId = user.campus.id;
+
+      subscription = {
+        status: SubscriptionStatus.ACTIVE,
+      };
     } else if (user.role === UserRole.TEACHER) {
       const teacher = await this.teacherService.findOneByUserId(user.id, ['user', 'campus']);
 

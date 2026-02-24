@@ -12,11 +12,6 @@ export class LoginDto {
   @IsString()
   @IsNotEmpty()
   password: string;
-
-  @ApiProperty({ required: false, description: 'ID del campus (solo para Super Admins)' })
-  @IsNumber()
-  @IsOptional()
-  campusId?: number;
 }
 
 export class ForgotPasswordDto {

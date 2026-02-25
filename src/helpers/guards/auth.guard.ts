@@ -49,15 +49,15 @@ export class AuthGuard implements CanActivate {
         };
       }
 
-      if (!payload.campusId) {
-        throw new UnauthorizedException('No autorizado - Campus no encontrado');
-      }
-
       if (payload.role !== UserRole.ADMIN) {
         const subscription = await this.subscriptionService.findOneByCampusId(payload.campusId);
 
         if (!subscription) {
           throw new UnauthorizedException('No autorizado - Suscripción no encontrada');
+        }
+
+        if (!payload.campusId) {
+          throw new UnauthorizedException('No autorizado - Campus no encontrado');
         }
       }
 

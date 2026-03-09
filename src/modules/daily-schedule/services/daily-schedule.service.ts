@@ -188,7 +188,16 @@ export class DailyScheduleService {
     const studentRelations = await this.dailyScheduleRepository
       .createQueryBuilder('daily')
       .leftJoin('daily.students', 'student')
-      .addSelect(['student.id', 'student.firstName', 'student.lastName', 'student.daysEnrolled'])
+      .leftJoinAndSelect('student.additionalPrograms', 'additionalProgram')
+      .addSelect([
+        'student.id',
+        'student.firstName',
+        'student.lastName',
+        'student.daysEnrolled',
+        'additionalProgram.id',
+        'additionalProgram.name',
+        'additionalProgram.days',
+      ])
       .where('daily.id IN (:...ids)', { ids: scheduleIds })
       .andWhere('student.campus.id = :campusId', { campusId })
       .getMany();

@@ -52,7 +52,6 @@ export class AdditionalProgramController {
   @Get('/with-students')
   @ApiQuery({ name: 'campus', required: false, type: Number })
   async findAllWithStudents(@User() user: AuthUser, @Query('campus') campusId?: number) {
-    console.log('Finding all additional programs with students for campus ID:', user.campusId || campusId);
     return this.additionalProgramService.findAllWithStudents(user.campusId || campusId);
   }
 

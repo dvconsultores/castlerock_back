@@ -8,12 +8,15 @@ import { Multer } from 'multer';
 import { ExceptionHandler } from '../../../helpers/handlers/exception.handler';
 import { StorageService } from '../../../shared/storage/storage.service';
 import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
+import { StudentEntity } from '../../student/entities/student.entity';
 
 @Injectable()
 export class AdditionalProgramService {
   constructor(
     @InjectRepository(AdditionalProgramEntity)
     private readonly repository: Repository<AdditionalProgramEntity>,
+    @InjectRepository(StudentEntity)
+    private readonly studentRepository: Repository<StudentEntity>,
     private readonly storageService: StorageService,
   ) {}
 
@@ -70,25 +73,57 @@ export class AdditionalProgramService {
     });
   }
 
-  async findAllWithStudents(campusId?: number): Promise<AdditionalProgramEntity[]> {
-    const query = this.repository
+  async findAllWithStudents(campusId?: number): Promise<any[]> {
+    console.log('Finding all additional programs with students for campusId:', campusId);
+
+    // 1️⃣ obtener programs
+    const programsQuery = this.repository
       .createQueryBuilder('additional_program')
       .leftJoinAndSelect('additional_program.campus', 'campus')
-      .leftJoinAndSelect('additional_program.students', 'students')
-      .select([
-        'additional_program',
-        'campus.id',
-        'campus.name',
-        'students.id',
-        'students.firstName',
-        'students.lastName',
-      ]);
+      .select(['additional_program', 'campus.id', 'campus.name']);
 
     if (campusId) {
-      query.where('campus.id = :campusId', { campusId });
+      programsQuery.where('campus.id = :campusId', { campusId });
     }
 
-    return query.getMany();
+    const programs = await programsQuery.getMany();
+
+    if (!programs.length) return [];
+
+    const programIds = programs.map((p) => p.id);
+
+    // 2️⃣ obtener estudiantes
+    const students = await this.studentRepository
+      .createQueryBuilder('student')
+      .leftJoinAndSelect('student.additionalPrograms', 'program')
+      .select(['student.id', 'student.firstName', 'student.lastName', 'program.id'])
+      .where('program.id IN (:...programIds)', { programIds })
+      .getMany();
+
+    // 3️⃣ agrupar estudiantes por programa
+    const programStudentsMap: any = new Map<number, any[]>();
+
+    students.forEach((student) => {
+      student.additionalPrograms.forEach((program) => {
+        if (!programStudentsMap.has(program.id)) {
+          programStudentsMap.set(program.id, []);
+        }
+
+        programStudentsMap.get(program.id).push({
+          id: student.id,
+          firstName: student.firstName,
+          lastName: student.lastName,
+        });
+      });
+    });
+
+    // 4️⃣ añadir students a cada program
+    const result = programs.map((program) => ({
+      ...program,
+      students: programStudentsMap.get(program.id) || [],
+    }));
+
+    return result;
   }
 
   async findOneWithRelations(id: number, relations: string[]): Promise<AdditionalProgramEntity | null> {

@@ -70,6 +70,27 @@ export class AdditionalProgramService {
     });
   }
 
+  async findAllWithStudents(campusId?: number): Promise<AdditionalProgramEntity[]> {
+    const query = this.repository
+      .createQueryBuilder('additional_program')
+      .leftJoinAndSelect('additional_program.campus', 'campus')
+      .leftJoinAndSelect('additional_program.students', 'students')
+      .select([
+        'additional_program',
+        'campus.id',
+        'campus.name',
+        'students.id',
+        'students.firstName',
+        'students.lastName',
+      ]);
+
+    if (campusId) {
+      query.where('campus.id = :campusId', { campusId });
+    }
+
+    return query.getMany();
+  }
+
   async findOneWithRelations(id: number, relations: string[]): Promise<AdditionalProgramEntity | null> {
     return await this.repository.findOne({
       where: { id },

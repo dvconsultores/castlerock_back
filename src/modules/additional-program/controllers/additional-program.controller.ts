@@ -49,6 +49,12 @@ export class AdditionalProgramController {
     return this.additionalProgramService.findAll(user.campusId || campusId);
   }
 
+  @Get('/with-students')
+  @ApiQuery({ name: 'campus', required: false, type: Number })
+  async findAllWithStudents(@User() user: AuthUser, @Query('campus') campusId?: number) {
+    return this.additionalProgramService.findAllWithStudents(user.campusId || campusId);
+  }
+
   @Get(':additionalProgramId')
   async findOne(@User() user: AuthUser, @Param('additionalProgramId') id: number) {
     return this.additionalProgramService.findOne(user, id);

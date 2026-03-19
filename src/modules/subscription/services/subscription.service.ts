@@ -331,4 +331,33 @@ export class SubscriptionService {
       nextBillingDate: currentSub.nextBillingDate,
     };
   }
+
+  async cancelSubscription(campusId: number) {
+    const subscription = await this.repository.findOne({
+      where: { campus: { id: campusId }, status: SubscriptionStatus.ACTIVE },
+      relations: { campus: true },
+    });
+
+    if (!subscription) {
+      throw new NotFoundException('No se encontró una suscripción activa para este campus');
+    }
+
+    // Cancelar en Stripe si existe suscripción externa
+    if (subscription.externalSubscriptionId) {
+      try {
+        await this.stripeService.cancelSubscription(subscription.externalSubscriptionId);
+      } catch (error: any) {
+        throw new BadRequestException(`Error al cancelar en Stripe: ${error.message}`);
+      }
+    }
+
+    subscription.status = SubscriptionStatus.CANCELED;
+    await this.repository.save(subscription);
+
+    return {
+      ok: true,
+      message: 'Suscripción cancelada exitosamente',
+      status: subscription.status,
+    };
+  }
 }

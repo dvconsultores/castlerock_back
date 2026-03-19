@@ -31,4 +31,10 @@ export class SubscriptionController {
   async reactivate(@User() user: AuthUser, @Body() dto: ReactivateSubscriptionDto) {
     return this.subscriptionService.reactivateSubscription(user.campusId, dto.planId, dto.paymentMethodId);
   }
+
+  @Post('cancel')
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  async cancel(@User() user: AuthUser) {
+    return this.subscriptionService.cancelSubscription(user.campusId);
+  }
 }

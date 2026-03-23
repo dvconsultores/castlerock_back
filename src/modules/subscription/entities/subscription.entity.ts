@@ -30,7 +30,10 @@ export class SubscriptionEntity {
   nextBillingDate: Date; // CRUCIAL: Aquí sabes cuándo cortar el servicio
 
   // Relación con el Campus (Una escuela tiene una suscripción activa)
-  @ManyToOne(() => CampusEntity, (campus) => campus.subscriptions)
+  @ManyToOne(() => CampusEntity, (campus) => campus.subscriptions, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
   @JoinColumn({ name: 'campus_id' })
   campus: CampusEntity;
 

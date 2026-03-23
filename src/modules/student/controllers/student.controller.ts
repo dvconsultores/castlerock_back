@@ -57,7 +57,7 @@ export class StudentController {
       imageContactSecondary?: Multer.File[];
     },
   ) {
-    if (body.campus !== user.campusId) {
+    if (String(body.campus) !== String(user.campusId)) {
       throw new Error('Unauthorized');
     }
     return this.studentService.create(

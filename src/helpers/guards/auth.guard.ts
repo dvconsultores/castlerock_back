@@ -36,6 +36,8 @@ export class AuthGuard implements CanActivate {
         secret: this.configService.get('JWT_SECRET', { infer: true }),
       });
 
+      console.log('Payload decoded from token:', payload);
+
       const roles = this.reflector.getAllAndOverride<UserRole[]>('roles', [context.getHandler(), context.getClass()]);
 
       if (payload.role !== UserRole.ADMIN && roles && !roles.includes(payload.role)) {
@@ -48,6 +50,8 @@ export class AuthGuard implements CanActivate {
           campusId: request.headers['campus-id'] || null,
         };
       }
+
+      console.log('User role:', payload);
 
       if (payload.role !== UserRole.ADMIN) {
         console.log('Checking subscription for campusId:', payload);
@@ -66,6 +70,7 @@ export class AuthGuard implements CanActivate {
 
       return true;
     } catch (error: any) {
+      console.log('Error verifying token:', error);
       throw new UnauthorizedException(error.message || 'Token inválido');
     }
   }

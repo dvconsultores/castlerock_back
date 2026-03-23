@@ -39,7 +39,8 @@ export class ClassController {
     type: CreateClassDto,
   })
   async create(@User() user: AuthUser, @Body() body: CreateClassDto, @UploadedFile() image: Multer.File) {
-    if (body.campus !== user.campusId) {
+    console.log('Creating class with data:', body);
+    if (String(body.campus) !== String(user.campusId)) {
       throw new Error('Unauthorized');
     }
     return this.classService.create(user, body, image);
@@ -48,7 +49,7 @@ export class ClassController {
   @Get()
   @ApiQuery({ name: 'campus', required: false, type: Number, description: 'Campus ID' })
   async findAll(@User() user: AuthUser, @Query('campus') campusId?: number) {
-    if (campusId && campusId !== user.campusId) {
+    if (campusId && String(campusId) !== String(user.campusId)) {
       throw new Error('Unauthorized');
     }
     return this.classService.findAll(user.campusId || campusId);

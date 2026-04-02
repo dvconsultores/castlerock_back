@@ -13,7 +13,7 @@ export class TasksService {
     private readonly studentRepository: Repository<StudentEntity>,
   ) {}
 
-  // @Cron('0 */30 * * * *')
+  @Cron('0 */30 * * * *')
   async transitionStudentsToActive() {
     this.logger.log('⏰ Ejecutando tarea de transición de estudiantes...');
 

@@ -110,10 +110,12 @@ export class DailyScheduleService {
         }
       }
 
+      const uniqueStudents = Array.from(new Map(students.map((s) => [s.id, s])).values());
+
       const dailyScheduleEntity = plainToClass(DailyScheduleEntity, {
         planning,
         teachers,
-        students,
+        students: uniqueStudents,
         day: dto.day,
         date: scheduleDate,
         admin: adminId,

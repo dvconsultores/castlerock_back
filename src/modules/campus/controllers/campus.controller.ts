@@ -28,12 +28,12 @@ import { Multer } from 'multer';
 
 @ApiTags('Campus')
 @Controller('campus')
+@UseGuards(AuthGuard)
+@ApiBearerAuth()
 export class CampusController {
   constructor(private readonly campusService: CampusService) {}
 
   @Post()
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
@@ -46,56 +46,68 @@ export class CampusController {
   }
 
   @Get()
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   async findAll(@User() user: AuthUser) {
     return this.campusService.findAll(user);
   }
 
   @Get(':campusId')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
-  async findOne(@Param('campusId') id: number) {
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
+  async findOne(@User() user: AuthUser, @Param('campusId') id: number) {
+    if (user.campusId !== id && user.role !== UserRole.ADMIN) {
+      throw new Error('Forbidden');
+    }
+
     return this.campusService.findOne(id);
   }
 
   @Patch(':campusId')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'Update an campus with image upload',
     type: UpdateCampusDto,
   })
-  async update(@Param('campusId') id: number, @Body() body: UpdateCampusDto, @UploadedFile() image?: Multer.File) {
+  async update(
+    @User() user: AuthUser,
+    @Param('campusId') id: number,
+    @Body() body: UpdateCampusDto,
+    @UploadedFile() image?: Multer.File,
+  ) {
+    if (user.campusId !== id && user.role !== UserRole.ADMIN) {
+      throw new Error('Forbidden');
+    }
+
     return this.campusService.update(id, body, image);
   }
 
   @Delete(':campusId')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
-  async remove(@Param('campusId') id: number) {
+  async remove(@User() user: AuthUser, @Param('campusId') id: number) {
+    if (user.campusId !== id && user.role !== UserRole.ADMIN) {
+      throw new Error('Forbidden');
+    }
+
     return this.campusService.remove(id);
   }
 
   @Post(':campusId/assign-teacher')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
-  async assignTeacher(@Param('campusId') id: number, @Body() data: AssignTeacherDto) {
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
+  async assignTeacher(@User() user: AuthUser, @Param('campusId') id: number, @Body() data: AssignTeacherDto) {
+    if (user.campusId !== id && user.role !== UserRole.ADMIN) {
+      throw new Error('Forbidden');
+    }
+
     return this.campusService.assignTeacher(id, data);
   }
 
   @Delete(':campusId/remove-teacher')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
-  async removeTeacher(@Param('campusId') id: number, @Body() data: AssignTeacherDto) {
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
+  async removeTeacher(@User() user: AuthUser, @Param('campusId') id: number, @Body() data: AssignTeacherDto) {
+    if (user.campusId !== id && user.role !== UserRole.ADMIN) {
+      throw new Error('Forbidden');
+    }
+
     return this.campusService.removeTeacher(id, data);
   }
 }

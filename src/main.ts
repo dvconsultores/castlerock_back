@@ -5,6 +5,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppLogger } from './shared/logger/app-logger';
 import { ResponseInterceptor } from './helpers/interceptors/response.interceptor';
+import * as bodyParser from 'body-parser';
 
 process.loadEnvFile();
 
@@ -21,6 +22,9 @@ async function bootstrap() {
 
   app.enableCors();
   app.setGlobalPrefix('/api/v1');
+
+  app.use('/api/v1/stripe/webhook', bodyParser.raw({ type: 'application/json' }));
+
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.useGlobalInterceptors(new ResponseInterceptor());
 

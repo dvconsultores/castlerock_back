@@ -27,7 +27,7 @@ export class ReportController {
   @Post()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   async create(@Body() body: CreateReportDto, @Res() res: any) {
     if (body.pdf) {
       const pdfBuffer = await this.reportService.createPdf(body);

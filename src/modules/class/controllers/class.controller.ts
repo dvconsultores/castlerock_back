@@ -21,60 +21,63 @@ import { UserRole } from '../../../shared/enums/user-role.enum';
 import { Roles } from '../../../helpers/decorators/roles.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Multer } from 'multer';
+import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
+import { User } from '../../../helpers/decorators/user.decorator';
 
 @ApiTags('Classes')
 @Controller('classes')
+@UseGuards(AuthGuard)
+@ApiBearerAuth()
 export class ClassController {
   constructor(private readonly classService: ClassService) {}
 
   @Post()
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'Create an classroom with image upload',
     type: CreateClassDto,
   })
-  async create(@Body() body: CreateClassDto, @UploadedFile() image: Multer.File) {
-    return this.classService.create(body, image);
+  async create(@User() user: AuthUser, @Body() body: CreateClassDto, @UploadedFile() image: Multer.File) {
+    console.log('Creating class with data:', body);
+    if (String(body.campus) !== String(user.campusId)) {
+      throw new Error('Unauthorized');
+    }
+    return this.classService.create(user, body, image);
   }
 
   @Get()
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
   @ApiQuery({ name: 'campus', required: false, type: Number, description: 'Campus ID' })
-  async findAll(@Query('campus') campusId?: number) {
-    return this.classService.findAll(campusId);
+  async findAll(@User() user: AuthUser, @Query('campus') campusId?: number) {
+    if (campusId && String(campusId) !== String(user.campusId)) {
+      throw new Error('Unauthorized');
+    }
+    return this.classService.findAll(user.campusId || campusId);
   }
 
   @Get(':classId')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  async findOne(@Param('classId') id: number) {
-    return this.classService.findOne(id);
+  async findOne(@User() user: AuthUser, @Param('classId') id: number) {
+    return this.classService.findOne(user, id);
   }
 
   @Patch(':classId')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'Update an classroom with image upload',
     type: UpdateClassDto,
   })
-  async update(@Param('classId') id: number, @Body() body: UpdateClassDto, @UploadedFile() image: Multer.File) {
-    return this.classService.update(id, body, image);
+  async update(
+    @User() user: AuthUser,
+    @Param('classId') id: number,
+    @Body() body: UpdateClassDto,
+    @UploadedFile() image: Multer.File,
+  ) {
+    return this.classService.update(user, id, body, image);
   }
 
   @Delete(':classId')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
-  async remove(@Param('classId') id: number) {
-    return this.classService.remove(id);
+  async remove(@User() user: AuthUser, @Param('classId') id: number) {
+    return this.classService.remove(user, id);
   }
 }

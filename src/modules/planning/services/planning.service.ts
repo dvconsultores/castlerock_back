@@ -34,6 +34,7 @@ import { WeekDayEnum } from '../../../shared/enums/week-day.enum';
 import { DailyScheduleService } from '../../daily-schedule/services/daily-schedule.service';
 import { TeacherService } from '../../teacher/services/teacher.service';
 import { StudentService } from '../../student/services/student.service';
+import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
 
 @Injectable()
 export class PlanningService {
@@ -52,7 +53,7 @@ export class PlanningService {
     return await this.repository.save(entity);
   }
 
-  async create(dto: CreatePlanningDto, userId: number): Promise<PlanningEntity> {
+  async create(user: AuthUser, dto: CreatePlanningDto, userId: number): Promise<PlanningEntity> {
     const planningFound = await this.findOneByParams({
       campus: dto.campus,
       class: dto.class,
@@ -71,7 +72,7 @@ export class PlanningService {
       throw new NotFoundException('Sede not found');
     }
 
-    const classFound = await this.classService.findOne(dto.class);
+    const classFound = await this.classService.findOne(user, dto.class);
 
     if (!classFound) {
       throw new NotFoundException('Clase not found');
@@ -120,6 +121,7 @@ export class PlanningService {
       );
 
       await this.dailyScheduleService.create(
+        user,
         {
           planningId: plan.id,
           day,
@@ -148,7 +150,7 @@ export class PlanningService {
     return planFound;
   }
 
-  async findAll(): Promise<PlanningEntity[]> {
+  async findAll(user: AuthUser): Promise<PlanningEntity[]> {
     return await this.repository.find({
       relations: [
         'campus',
@@ -158,14 +160,15 @@ export class PlanningService {
         'dailySchedules.students',
         'dailySchedules.teachers.user',
       ],
+      where: { campus: { id: user.campusId } },
     });
   }
 
-  async findByParams(query: FindPlanningDtoQuery): Promise<PlanningEntity[]> {
+  async findByParams(user: AuthUser, query: FindPlanningDtoQuery): Promise<PlanningEntity[]> {
     const { campus, class: classId, year, month, week } = query;
 
     const filters = {
-      campus: { id: campus },
+      campus: { id: user.campusId },
       class: { id: classId },
       year,
       month,
@@ -202,9 +205,16 @@ export class PlanningService {
     });
   }
 
-  async findOne(id: number): Promise<PlanningEntity | null> {
+  async findOne(user: AuthUser, id: number): Promise<PlanningEntity | null> {
     return await this.repository.findOne({
-      where: { id },
+      where: { id, campus: { id: user.campusId } },
+      relations: ['campus', 'class', 'dailySchedules', 'dailySchedules.teachers', 'dailySchedules.students'],
+    });
+  }
+
+  async findOneAndCampus(id: number, campusId: number): Promise<PlanningEntity | null> {
+    return await this.repository.findOne({
+      where: { id, campus: { id: campusId } },
       relations: ['campus', 'class', 'dailySchedules', 'dailySchedules.teachers', 'dailySchedules.students'],
     });
   }
@@ -216,15 +226,18 @@ export class PlanningService {
     });
   }
 
-  async update(id: number, updateData: UpdatePlanningDto): Promise<void> {
-    const updateResult = await this.repository.update({ id }, plainToClass(PlanningEntity, updateData));
+  async update(user: AuthUser, id: number, updateData: UpdatePlanningDto): Promise<void> {
+    const updateResult = await this.repository.update(
+      { id, campus: { id: user.campusId } },
+      plainToClass(PlanningEntity, updateData),
+    );
     if (updateResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }
   }
 
-  async remove(id: number): Promise<void> {
-    const deleteResult = await this.repository.delete({ id });
+  async remove(user: AuthUser, id: number): Promise<void> {
+    const deleteResult = await this.repository.delete({ id, campus: { id: user.campusId } });
     if (deleteResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }

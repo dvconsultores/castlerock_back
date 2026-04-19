@@ -14,6 +14,7 @@ import { CreateTeacherDto, TeacherDto, UpdateTeacherDto } from '../dto/teacher.d
 import { instanceToPlain, plainToClass } from 'class-transformer';
 import { ClassService } from '../../class/services/class.service';
 import { DailyScheduleEntity } from '../../daily-schedule/entities/daily-schedule.entity';
+import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
 
 @Injectable()
 export class TeacherService {
@@ -29,8 +30,11 @@ export class TeacherService {
     return await this.repository.save(entity);
   }
 
-  async create(dto: CreateTeacherDto): Promise<TeacherEntity> {
-    const classes = await this.classService.findByIds(dto.classIds);
+  async create(user: AuthUser, dto: CreateTeacherDto): Promise<TeacherEntity> {
+    if (user.campusId !== dto.campus) {
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    }
+    const classes = await this.classService.findByIds(dto.classIds, user.campusId);
 
     const newEntity = plainToClass(TeacherEntity, { ...dto, classes });
 
@@ -43,7 +47,7 @@ export class TeacherService {
 
     const futureSchedules = await this.dailyScheduleRepository.find({
       where: {
-        planning: { class: { id: In(dto.classIds) } },
+        planning: { class: { id: In(dto.classIds), campus: { id: user.campusId } } },
         date: MoreThanOrEqual(today),
       },
       relations: ['teachers'],
@@ -61,7 +65,7 @@ export class TeacherService {
     return teacher;
   }
 
-  async findAll(campusId?: number): Promise<any[]> {
+  async findAll(user: AuthUser): Promise<any[]> {
     const query = this.repository
       .createQueryBuilder('teacher')
       .leftJoinAndSelect('teacher.user', 'user')
@@ -82,8 +86,8 @@ export class TeacherService {
         'class.name',
       ]);
 
-    if (campusId) {
-      query.where('campus.id = :campusId', { campusId });
+    if (user.campusId) {
+      query.where('campus.id = :campusId', { campusId: user.campusId });
     }
 
     const teachers = await query.getMany();
@@ -101,9 +105,9 @@ export class TeacherService {
     return teachers;
   }
 
-  async findOne(id: number): Promise<TeacherEntity | null> {
+  async findOne(user: AuthUser, id: number): Promise<TeacherEntity | null> {
     return await this.repository.findOne({
-      where: { id },
+      where: { id, campus: { id: user.campusId } },
       relations: ['user', 'campus', 'classes'],
     });
   }
@@ -122,10 +126,10 @@ export class TeacherService {
     });
   }
 
-  async update(id: number, updateData: UpdateTeacherDto): Promise<void> {
+  async update(user: AuthUser, id: number, updateData: UpdateTeacherDto): Promise<void> {
     if (updateData.classIds !== undefined && updateData.classIds.length >= 0) {
       const teacher = await this.repository.findOne({
-        where: { id },
+        where: { id, campus: { id: user.campusId } },
         relations: ['classes'],
       });
 
@@ -133,7 +137,7 @@ export class TeacherService {
         throw new NotFoundException('Teacher not found');
       }
 
-      const classes = updateData.classIds ? await this.classService.findByIds(updateData.classIds) : [];
+      const classes = updateData.classIds ? await this.classService.findByIds(updateData.classIds, user.campusId) : [];
 
       const removedClasses = teacher.classes.filter((oldC) => !classes.some((newC) => newC.id === oldC.id));
 
@@ -144,7 +148,7 @@ export class TeacherService {
 
       const futureSchedules = await this.dailyScheduleRepository.find({
         where: {
-          planning: { class: { id: In(classes.map((c) => c.id)) } },
+          planning: { class: { id: In(classes.map((c) => c.id)), campus: { id: user.campusId } } },
           date: MoreThanOrEqual(today),
         },
         relations: ['teachers'],
@@ -166,6 +170,7 @@ export class TeacherService {
           .andWhere('pl.classId = :removedClassId', { removedClassId: removedClass.id })
           .innerJoin('ds.teachers', 's_filter', 's_filter.id = :teacherId', { teacherId })
           .leftJoinAndSelect('ds.teachers', 'allTeachers')
+          .andWhere('pl.campus.id = :campusId', { campusId: user.campusId })
           .getMany();
 
         schedulesToRemove.forEach((sched) => {
@@ -183,21 +188,27 @@ export class TeacherService {
       delete updateData.classIds;
     }
 
-    const updateResult = await this.repository.update({ id }, plainToClass(TeacherEntity, updateData));
+    const updateResult = await this.repository.update(
+      { id, campus: { id: user.campusId } },
+      plainToClass(TeacherEntity, updateData),
+    );
     if (updateResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }
   }
 
-  async remove(id: number): Promise<void> {
-    const deleteResult = await this.repository.delete({ id });
+  async remove(user: AuthUser, id: number): Promise<void> {
+    const deleteResult = await this.repository.delete({ id, campus: { id: user.campusId } });
     if (deleteResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }
   }
 
-  async findByIds(ids: number[]): Promise<TeacherEntity[]> {
-    return await this.repository.find({ where: { id: In(ids) }, relations: ['user', 'campus', 'classes'] });
+  async findByIds(ids: number[], campusId: number): Promise<TeacherEntity[]> {
+    return await this.repository.find({
+      where: { id: In(ids), campus: { id: campusId } },
+      relations: ['user', 'campus', 'classes'],
+    });
   }
 
   async findByClassId(classId: number): Promise<TeacherEntity[]> {

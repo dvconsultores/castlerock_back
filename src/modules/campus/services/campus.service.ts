@@ -50,7 +50,7 @@ export class CampusService {
 
   async findAll(user: AuthUser): Promise<CampusEntity[]> {
     if (user.role === UserRole.ADMIN) {
-      return await this.campusRepository.find();
+      return await this.campusRepository.find({ relations: ['subscriptions'] });
     } else if (user.role === UserRole.TEACHER) {
       const teacher = await this.teacherService.findOneWithRelations(user.id, ['user', 'campus']);
 
@@ -59,6 +59,8 @@ export class CampusService {
       }
 
       return [teacher.campus];
+    } else if (user.role === UserRole.OWNER) {
+      return await this.campusRepository.find({ where: { users: { id: user.id } }, relations: ['subscriptions'] });
     } else {
       throw new ForbiddenException(`User role ${user.role} not allowed to access this resource`);
     }
@@ -69,6 +71,8 @@ export class CampusService {
       .createQueryBuilder('campus')
       .leftJoinAndSelect('campus.teachers', 'teacher')
       .leftJoinAndSelect('teacher.user', 'user')
+      .leftJoinAndSelect('campus.subscriptions', 'subscription')
+      .leftJoinAndSelect('subscription.plan', 'plan')
       .select([
         'campus.id',
         'campus.name',
@@ -81,6 +85,14 @@ export class CampusService {
         'user.firstName',
         'user.lastName',
         'user.email',
+
+        'subscription.id',
+        'subscription.status',
+        'subscription.nextBillingDate',
+
+        'plan.id',
+        'plan.name',
+        'plan.billingCycle',
       ])
       .where('campus.id = :id', { id })
       .getOne();

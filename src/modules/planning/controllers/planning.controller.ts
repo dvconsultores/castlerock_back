@@ -31,16 +31,16 @@ export class PlanningController {
   @Post()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   async create(@Body() body: CreatePlanningDto, @User() user: AuthUser) {
     if (body.week) {
-      return this.planningService.create(body, user.id);
+      return this.planningService.create(user, body, user.id);
     } else {
       const promises: any[] = [];
 
       for (let i = 1; i <= 6; i++) {
         const newBody = { ...body, week: i };
-        promises.push(this.planningService.create(newBody, user.id));
+        promises.push(this.planningService.create(user, newBody, user.id));
       }
 
       const results = await Promise.allSettled(promises);
@@ -64,37 +64,40 @@ export class PlanningController {
   @Get()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findAll() {
-    return this.planningService.findAll();
+  async findAll(@User() user: AuthUser) {
+    return this.planningService.findAll(user);
   }
 
   @Get('search')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findByParams(@Query(new ValidationPipe({ transform: true })) query: FindPlanningDtoQuery) {
-    return this.planningService.findByParams(query);
+  async findByParams(
+    @User() user: AuthUser,
+    @Query(new ValidationPipe({ transform: true })) query: FindPlanningDtoQuery,
+  ) {
+    return this.planningService.findByParams(user, query);
   }
 
   @Get(':planningId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async findOne(@Param('planningId') id: number) {
-    return this.planningService.findOne(id);
+  async findOne(@User() user: AuthUser, @Param('planningId') id: number) {
+    return this.planningService.findOne(user, id);
   }
 
   @Patch(':planningId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
-  async update(@Param('planningId') id: number, @Body() body: UpdatePlanningDto) {
-    return this.planningService.update(id, body);
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
+  async update(@User() user: AuthUser, @Param('planningId') id: number, @Body() body: UpdatePlanningDto) {
+    return this.planningService.update(user, id, body);
   }
 
   @Delete(':planningId')
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
-  async remove(@Param('planningId') id: number) {
-    return this.planningService.remove(id);
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
+  async remove(@User() user: AuthUser, @Param('planningId') id: number) {
+    return this.planningService.remove(user, id);
   }
 }

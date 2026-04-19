@@ -2,6 +2,8 @@ import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, CreateDat
 import { StudentEntity } from '../../student/entities/student.entity';
 import { TeacherEntity } from '../../teacher/entities/teacher.entity';
 import { ClassEntity } from '../../class/entities/class.entity';
+import { UserEntity } from '../../user/entities/user.entity';
+import { SubscriptionEntity } from '../../subscription/entities/subscription.entity';
 
 @Entity({ name: 'campuses' })
 export class CampusEntity {
@@ -29,6 +31,16 @@ export class CampusEntity {
   @OneToMany(() => TeacherEntity, (teacher) => teacher.campus)
   @JoinColumn()
   teachers: TeacherEntity[];
+
+  @OneToMany(() => UserEntity, (user) => user.campus)
+  @JoinColumn()
+  users: UserEntity[];
+
+  @OneToMany(() => SubscriptionEntity, (subscription) => subscription.campus)
+  subscriptions: SubscriptionEntity[];
+
+  @Column({ nullable: true })
+  stripeCustomerId?: string;
 
   @OneToMany(() => ClassEntity, (classEntity) => classEntity.campus)
   classes: ClassEntity[];

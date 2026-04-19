@@ -5,6 +5,7 @@ import { UserEntity } from '../entities/user.entity';
 import { CreateUserDto } from '../dto/user.dto';
 import { Multer } from 'multer';
 import { StorageService } from '../../../shared/storage/storage.service';
+import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
 
 @Injectable()
 export class UserService {
@@ -31,8 +32,9 @@ export class UserService {
     return await this.repository.save(newEntity);
   }
 
-  async findAll(): Promise<UserEntity[]> {
+  async findAll(user: AuthUser): Promise<UserEntity[]> {
     return await this.repository.find({
+      where: { campus: { id: user.campusId } },
       select: ['id', 'firstName', 'lastName', 'email', 'image', 'role', 'phone'],
     });
   }
@@ -47,6 +49,7 @@ export class UserService {
   async findOneByEmail(email: string): Promise<UserEntity | null> {
     return await this.repository.findOne({
       where: { email },
+      relations: ['campus'],
     });
   }
 

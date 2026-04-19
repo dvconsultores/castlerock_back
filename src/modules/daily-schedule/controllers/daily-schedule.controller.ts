@@ -28,54 +28,43 @@ import { DailySchedulesCacheInterceptor } from '../../../helpers/interceptors/da
 
 @ApiTags('Daily Schedules')
 @Controller('daily-schedules')
+@UseGuards(AuthGuard)
+@ApiBearerAuth()
 export class DailyScheduleController {
   constructor(private readonly dailyScheduleService: DailyScheduleService) {}
 
   @Post()
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
   @ApiBody({
     description: 'Create a new dailySchedule',
     type: CreateDailyScheduleDto,
   })
-  async create(@Body() body: CreateDailyScheduleDto, @User() user: AuthUser) {
-    return this.dailyScheduleService.create(body, user.id);
+  async create(@User() user: AuthUser, @Body() body: CreateDailyScheduleDto) {
+    return this.dailyScheduleService.create(user, body, user.id);
   }
 
   @Get()
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
   // @UseInterceptors(DailySchedulesCacheInterceptor)
   // @CacheTTL(60 * 1000)
-  async findAll(@Query('date') date?: string) {
-    return this.dailyScheduleService.findAll(date);
+  async findAll(@User() user: AuthUser, @Query('date') date?: string) {
+    return this.dailyScheduleService.findAll(user, date);
   }
 
   @Get(':dailyScheduleId')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  async findOne(@Param('dailyScheduleId') id: number) {
-    return this.dailyScheduleService.findOne(id);
+  async findOne(@User() user: AuthUser, @Param('dailyScheduleId') id: number) {
+    return this.dailyScheduleService.findOne(user, id);
   }
 
   @Patch(':dailyScheduleId')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
   @ApiBody({
     description: 'Update an dailySchedule',
     type: UpdateDailyScheduleDto,
   })
-  async update(@Param('dailyScheduleId') id: number, @Body() body: UpdateDailyScheduleDto) {
-    return this.dailyScheduleService.update(id, body);
+  async update(@User() user: AuthUser, @Param('dailyScheduleId') id: number, @Body() body: UpdateDailyScheduleDto) {
+    return this.dailyScheduleService.update(user, id, body);
   }
 
   @Delete(':dailyScheduleId')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @Roles(UserRole.ADMIN)
-  async remove(@Param('dailyScheduleId') id: number) {
-    return this.dailyScheduleService.remove(id);
+  async remove(@User() user: AuthUser, @Param('dailyScheduleId') id: number) {
+    return this.dailyScheduleService.remove(user, id);
   }
 }

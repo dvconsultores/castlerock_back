@@ -5,6 +5,8 @@ import { ConfigService } from '@nestjs/config';
 import { EnvironmentVariables } from '../../config/env';
 import { Reflector } from '@nestjs/core';
 import { UserRole } from '../../shared/enums/user-role.enum';
+import { SubscriptionService } from '../../modules/subscription/services/subscription.service';
+import { SubscriptionStatus } from '../../shared/enums/subscription-status.enum';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -12,6 +14,7 @@ export class AuthGuard implements CanActivate {
     private jwtService: JwtService,
     private readonly configService: ConfigService<EnvironmentVariables>,
     private readonly reflector: Reflector,
+    private readonly subscriptionService: SubscriptionService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -29,21 +32,46 @@ export class AuthGuard implements CanActivate {
     }
 
     try {
-      const payload = await this.jwtService.verify(token, {
+      let payload = await this.jwtService.verify(token, {
         secret: this.configService.get('JWT_SECRET', { infer: true }),
       });
 
+      console.log('Payload decoded from token:', payload);
+
       const roles = this.reflector.getAllAndOverride<UserRole[]>('roles', [context.getHandler(), context.getClass()]);
 
-      if (roles && !roles.includes(payload.role)) {
+      if (payload.role !== UserRole.ADMIN && roles && !roles.includes(payload.role)) {
         throw new UnauthorizedException('No autorizado');
+      }
+
+      if (payload.role === UserRole.ADMIN) {
+        payload = {
+          ...payload,
+          campusId: request.headers['campus-id'] || null,
+        };
+      }
+
+      console.log('User role:', payload);
+
+      if (payload.role !== UserRole.ADMIN) {
+        console.log('Checking subscription for campusId:', payload);
+        // const subscription = await this.subscriptionService.findOneByCampusId(payload.campusId);
+
+        // if (!subscription) {
+        //   throw new UnauthorizedException('No autorizado - Suscripción no encontrada');
+        // }
+
+        if (!payload.campusId) {
+          throw new UnauthorizedException('No autorizado - Campus no encontrado');
+        }
       }
 
       request['user'] = payload;
 
       return true;
-    } catch (error) {
-      throw new UnauthorizedException('Token inválido');
+    } catch (error: any) {
+      console.log('Error verifying token:', error);
+      throw new UnauthorizedException(error.message || 'Token inválido');
     }
   }
 }

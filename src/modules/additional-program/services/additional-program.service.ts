@@ -7,12 +7,16 @@ import { plainToClass } from 'class-transformer';
 import { Multer } from 'multer';
 import { ExceptionHandler } from '../../../helpers/handlers/exception.handler';
 import { StorageService } from '../../../shared/storage/storage.service';
+import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
+import { StudentEntity } from '../../student/entities/student.entity';
 
 @Injectable()
 export class AdditionalProgramService {
   constructor(
     @InjectRepository(AdditionalProgramEntity)
     private readonly repository: Repository<AdditionalProgramEntity>,
+    @InjectRepository(StudentEntity)
+    private readonly studentRepository: Repository<StudentEntity>,
     private readonly storageService: StorageService,
   ) {}
 
@@ -20,7 +24,7 @@ export class AdditionalProgramService {
     return await this.repository.save(entity);
   }
 
-  async create(dto: CreateAdditionalProgramDto, image?: Multer.File): Promise<AdditionalProgramEntity> {
+  async create(user: AuthUser, dto: CreateAdditionalProgramDto, image?: Multer.File): Promise<AdditionalProgramEntity> {
     try {
       let imageUrl: string | null = null;
 
@@ -29,7 +33,7 @@ export class AdditionalProgramService {
         dto.image = imageUrl;
       }
 
-      const newEntity = plainToClass(AdditionalProgramEntity, dto);
+      const newEntity = plainToClass(AdditionalProgramEntity, { ...dto, campus: user.campusId });
 
       return await this.repository.save(newEntity);
     } catch (error) {
@@ -52,9 +56,9 @@ export class AdditionalProgramService {
     return additionalPrograms;
   }
 
-  async findOne(id: number): Promise<AdditionalProgramEntity | null> {
+  async findOne(user: AuthUser, id: number): Promise<AdditionalProgramEntity | null> {
     return await this.repository.findOne({
-      where: { id },
+      where: { id, campus: { id: user.campusId } },
       relations: ['campus'],
       select: {
         id: true,
@@ -69,6 +73,59 @@ export class AdditionalProgramService {
     });
   }
 
+  async findAllWithStudents(campusId?: number): Promise<any[]> {
+    console.log('Finding all additional programs with students for campusId:', campusId);
+
+    // 1️⃣ obtener programs
+    const programsQuery = this.repository
+      .createQueryBuilder('additional_program')
+      .leftJoinAndSelect('additional_program.campus', 'campus')
+      .select(['additional_program', 'campus.id', 'campus.name']);
+
+    if (campusId) {
+      programsQuery.where('campus.id = :campusId', { campusId });
+    }
+
+    const programs = await programsQuery.getMany();
+
+    if (!programs.length) return [];
+
+    const programIds = programs.map((p) => p.id);
+
+    // 2️⃣ obtener estudiantes
+    const students = await this.studentRepository
+      .createQueryBuilder('student')
+      .leftJoinAndSelect('student.additionalPrograms', 'program')
+      .select(['student.id', 'student.firstName', 'student.lastName', 'program.id'])
+      .where('program.id IN (:...programIds)', { programIds })
+      .getMany();
+
+    // 3️⃣ agrupar estudiantes por programa
+    const programStudentsMap: any = new Map<number, any[]>();
+
+    students.forEach((student) => {
+      student.additionalPrograms.forEach((program) => {
+        if (!programStudentsMap.has(program.id)) {
+          programStudentsMap.set(program.id, []);
+        }
+
+        programStudentsMap.get(program.id).push({
+          id: student.id,
+          firstName: student.firstName,
+          lastName: student.lastName,
+        });
+      });
+    });
+
+    // 4️⃣ añadir students a cada program
+    const result = programs.map((program) => ({
+      ...program,
+      students: programStudentsMap.get(program.id) || [],
+    }));
+
+    return result;
+  }
+
   async findOneWithRelations(id: number, relations: string[]): Promise<AdditionalProgramEntity | null> {
     return await this.repository.findOne({
       where: { id },
@@ -76,7 +133,7 @@ export class AdditionalProgramService {
     });
   }
 
-  async update(id: number, updateData: UpdateAdditionalProgramDto, image?: Multer.File): Promise<void> {
+  async update(user: AuthUser, id: number, updateData: UpdateAdditionalProgramDto, image?: Multer.File): Promise<void> {
     try {
       let imageUrl: string | undefined;
 
@@ -85,7 +142,10 @@ export class AdditionalProgramService {
         updateData.image = imageUrl;
       }
 
-      const updateResult = await this.repository.update({ id }, plainToClass(AdditionalProgramEntity, updateData));
+      const updateResult = await this.repository.update(
+        { id, campus: { id: user.campusId } },
+        plainToClass(AdditionalProgramEntity, updateData),
+      );
       if (updateResult.affected === 0) {
         throw new NotFoundException('Item not found');
       }
@@ -94,8 +154,8 @@ export class AdditionalProgramService {
     }
   }
 
-  async remove(id: number): Promise<void> {
-    const deleteResult = await this.repository.delete({ id });
+  async remove(user: AuthUser, id: number): Promise<void> {
+    const deleteResult = await this.repository.delete({ id, campus: { id: user.campusId } });
     if (deleteResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }

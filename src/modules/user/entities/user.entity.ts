@@ -13,6 +13,7 @@ import * as bcrypt from 'bcrypt';
 import { UserRole } from '../../../shared/enums/user-role.enum';
 import { NotificationEntity } from '../../notification/entities/notification.entity';
 import { Exclude } from 'class-transformer';
+import { CampusEntity } from '../../campus/entities/campus.entity';
 
 @Entity({ name: 'users' })
 export class UserEntity {
@@ -48,6 +49,9 @@ export class UserEntity {
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
+
+  @ManyToOne(() => CampusEntity, (campus) => campus.users, { onDelete: 'SET NULL', nullable: true })
+  campus: CampusEntity;
 
   @Exclude()
   private tempPassword!: string;

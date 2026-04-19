@@ -21,15 +21,17 @@ import { Roles } from '../../../helpers/decorators/roles.decorator';
 import { AuthGuard } from '../../../helpers/guards/auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Multer } from 'multer';
+import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
+import { User } from '../../../helpers/decorators/user.decorator';
 
 @ApiTags('Users')
 @Controller('users')
+@UseGuards(AuthGuard)
+@ApiBearerAuth()
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
@@ -42,22 +44,20 @@ export class UserController {
   }
 
   @Get()
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  async findAll() {
-    return this.userService.findAll();
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
+  async findAll(@User() user: AuthUser) {
+    return this.userService.findAll(user);
   }
 
   @Get(':userId')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  async findOne(@Param('userId') id: number) {
+  async findOne(@User() user: AuthUser, @Param('userId') id: number) {
+    if (user.id !== id && user.role !== UserRole.ADMIN) {
+      throw new Error('You do not have permission to access this user');
+    }
     return this.userService.findOne(id);
   }
 
   @Patch(':userId')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
@@ -65,13 +65,19 @@ export class UserController {
     description: 'Update a user with image upload',
     type: UpdateUserDto,
   })
-  async update(@Param('userId') id: number, @Body() body: UpdateUserDto, @UploadedFile() image: Multer.File) {
+  async update(
+    @User() user: AuthUser,
+    @Param('userId') id: number,
+    @Body() body: UpdateUserDto,
+    @UploadedFile() image: Multer.File,
+  ) {
+    if (user.id !== id && user.role !== UserRole.ADMIN) {
+      throw new Error('You do not have permission to access this user');
+    }
     return this.userService.update(id, body, image);
   }
 
   @Delete(':userId')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
   @Roles(UserRole.ADMIN)
   async remove(@Param('userId') id: number) {
     return this.userService.remove(id);

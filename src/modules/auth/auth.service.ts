@@ -91,6 +91,8 @@ export class AuthService {
         }
 
         payload.campusId = campus.id;
+
+        subscription = campus.subscriptions[0] || null;
       }
     } else if (user.role === UserRole.OWNER) {
       campus = await this.campusService.findOne(user.campus.id);

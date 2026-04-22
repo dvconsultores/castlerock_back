@@ -34,8 +34,7 @@ export class DailyScheduleEntity {
   @JoinTable()
   students: StudentEntity[];
 
-  @Index()
-  @ManyToOne(() => UserEntity, { nullable: false, onDelete: 'SET NULL' })
+  @ManyToOne(() => UserEntity, { nullable: true, onDelete: 'SET NULL' })
   admin: UserEntity;
 
   @Column({ nullable: true })

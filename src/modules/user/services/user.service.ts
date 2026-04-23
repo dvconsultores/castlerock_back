@@ -19,7 +19,7 @@ export class UserService {
     return await this.repository.save(entity);
   }
 
-  async create(dto: CreateUserDto, image?: Multer.File): Promise<UserEntity> {
+  async create(user: AuthUser, dto: CreateUserDto, image?: Multer.File): Promise<UserEntity> {
     let imageUrl: string | null = null;
 
     if (image) {
@@ -27,7 +27,7 @@ export class UserService {
       dto.image = imageUrl;
     }
 
-    const newEntity = this.repository.create(dto);
+    const newEntity = this.repository.create({ ...dto, campus: { id: user.campusId } });
 
     return await this.repository.save(newEntity);
   }

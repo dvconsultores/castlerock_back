@@ -40,6 +40,10 @@ export class AuthGuard implements CanActivate {
 
       const roles = this.reflector.getAllAndOverride<UserRole[]>('roles', [context.getHandler(), context.getClass()]);
 
+      console.log('Required roles for this route:', roles);
+
+      console.log('User role from token payload:', payload.role);
+
       if (payload.role !== UserRole.ADMIN && roles && !roles.includes(payload.role)) {
         throw new UnauthorizedException('No autorizado');
       }
@@ -55,11 +59,11 @@ export class AuthGuard implements CanActivate {
 
       if (payload.role !== UserRole.ADMIN) {
         console.log('Checking subscription for campusId:', payload);
-        // const subscription = await this.subscriptionService.findOneByCampusId(payload.campusId);
+        const subscription = await this.subscriptionService.findOneByCampusId(payload.campusId);
 
-        // if (!subscription) {
-        //   throw new UnauthorizedException('No autorizado - Suscripción no encontrada');
-        // }
+        if (!subscription) {
+          throw new UnauthorizedException('No autorizado - Suscripción no encontrada');
+        }
 
         if (!payload.campusId) {
           throw new UnauthorizedException('No autorizado - Campus no encontrado');

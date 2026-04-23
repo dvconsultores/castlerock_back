@@ -32,15 +32,19 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'Create a user with image upload',
     type: CreateUserDto,
   })
-  async create(@Body() body: CreateUserDto, @UploadedFile() image?: Multer.File) {
-    return this.userService.create(body, image);
+  async create(@User() user: AuthUser, @Body() body: CreateUserDto, @UploadedFile() image?: Multer.File) {
+    if (body.role === UserRole.ADMIN && user.role !== UserRole.ADMIN) {
+      throw new Error('Only admins can create other admins');
+    }
+
+    return this.userService.create(user, body, image);
   }
 
   @Get()
@@ -58,7 +62,7 @@ export class UserController {
   }
 
   @Patch(':userId')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -78,8 +82,8 @@ export class UserController {
   }
 
   @Delete(':userId')
-  @Roles(UserRole.ADMIN)
-  async remove(@Param('userId') id: number) {
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
+  async remove(@User() user: AuthUser, @Param('userId') id: number) {
     return this.userService.remove(id);
   }
 }

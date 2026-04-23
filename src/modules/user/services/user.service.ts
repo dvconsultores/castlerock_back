@@ -6,6 +6,7 @@ import { CreateUserDto } from '../dto/user.dto';
 import { Multer } from 'multer';
 import { StorageService } from '../../../shared/storage/storage.service';
 import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
+import { UserRole } from '../../../shared/enums/user-role.enum';
 
 @Injectable()
 export class UserService {
@@ -27,7 +28,10 @@ export class UserService {
       dto.image = imageUrl;
     }
 
-    const newEntity = this.repository.create({ ...dto, campus: { id: user.campusId } });
+    const newEntity = this.repository.create({
+      ...dto,
+      campus: { id: dto.role === UserRole.ADMIN ? (null as any) : user.campusId },
+    });
 
     return await this.repository.save(newEntity);
   }

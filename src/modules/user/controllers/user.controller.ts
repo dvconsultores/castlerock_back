@@ -55,9 +55,6 @@ export class UserController {
 
   @Get(':userId')
   async findOne(@User() user: AuthUser, @Param('userId') id: number) {
-    if (user.id !== id && user.role !== UserRole.ADMIN) {
-      throw new Error('You do not have permission to access this user');
-    }
     return this.userService.findOne(id);
   }
 

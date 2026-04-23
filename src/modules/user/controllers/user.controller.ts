@@ -72,18 +72,15 @@ export class UserController {
     @Body() body: UpdateUserDto,
     @UploadedFile() image: Multer.File,
   ) {
-    if (user.id !== id && user.role !== UserRole.ADMIN) {
-      throw new Error('You do not have permission to access this user');
-    }
     if (body.role === UserRole.ADMIN && user.role !== UserRole.ADMIN) {
       throw new Error('Only admins can assign admin role');
     }
-    return this.userService.update(id, body, image);
+    return this.userService.update(user, id, body, image);
   }
 
   @Delete(':userId')
   @Roles(UserRole.ADMIN, UserRole.OWNER)
   async remove(@User() user: AuthUser, @Param('userId') id: number) {
-    return this.userService.remove(id);
+    return this.userService.remove(user, id);
   }
 }

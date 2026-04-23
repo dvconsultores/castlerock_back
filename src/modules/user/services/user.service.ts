@@ -57,7 +57,7 @@ export class UserService {
     });
   }
 
-  async update(user: AuthUser, id: number, updateData: Partial<UserEntity>, image?: Multer.File): Promise<void> {
+  async update(id: number, updateData: Partial<UserEntity>, image?: Multer.File, user?: AuthUser): Promise<void> {
     let imageUrl: string | undefined;
 
     if (image) {
@@ -67,11 +67,11 @@ export class UserService {
 
     const dataUpdate = updateData;
 
-    if (updateData.role) {
+    if (updateData.role && user) {
       updateData.campus = updateData.role === UserRole.ADMIN ? (null as any) : { id: user.campusId };
     }
 
-    const updateResult = await this.repository.update({ id, campus: { id: user.campusId } }, dataUpdate);
+    const updateResult = await this.repository.update({ id }, dataUpdate);
     if (updateResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }

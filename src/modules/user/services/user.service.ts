@@ -65,10 +65,13 @@ export class UserService {
       updateData.image = imageUrl;
     }
 
-    const updateResult = await this.repository.update(
-      { id, campus: { id: user.campusId } },
-      { ...updateData, campus: updateData.role === UserRole.ADMIN ? (null as any) : { id: user.campusId } },
-    );
+    const dataUpdate = updateData;
+
+    if (updateData.role) {
+      updateData.campus = updateData.role === UserRole.ADMIN ? (null as any) : { id: user.campusId };
+    }
+
+    const updateResult = await this.repository.update({ id, campus: { id: user.campusId } }, dataUpdate);
     if (updateResult.affected === 0) {
       throw new NotFoundException('Item not found');
     }

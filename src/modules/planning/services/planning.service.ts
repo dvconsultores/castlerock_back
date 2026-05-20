@@ -113,11 +113,16 @@ export class PlanningService {
       );
 
       const teacherIds = teachers.map((t) => t.id);
-      const studentIds = students.map((s) => s.id);
-      const transitionStudentIds = studentsTransition.map((s) => s.id);
+      // Unimos base + transiciones pendientes hacia esta clase. El daily
+      // schedule service filtrará luego a quiénes corresponden por fecha
+      // efectiva (según su matriz base o su transición pendiente).
+      const studentIdSet = new Set<number>();
+      students.forEach((s) => studentIdSet.add(s.id));
+      studentsTransition.forEach((s) => studentIdSet.add(s.id));
+      const studentIds = Array.from(studentIdSet);
 
       console.log(
-        `Creating daily schedule for day: ${day} with teachers: [${teacherIds}], students: [${studentIds}], transition students: [${transitionStudentIds}]`,
+        `Creating daily schedule for day: ${day} with teachers: [${teacherIds}], students (union base + transitions): [${studentIds}]`,
       );
 
       await this.dailyScheduleService.create(
@@ -127,7 +132,6 @@ export class PlanningService {
           day,
           teacherIds,
           studentIds,
-          transitionStudentIds,
         },
         userId,
       );

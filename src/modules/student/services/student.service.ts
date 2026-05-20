@@ -1,29 +1,30 @@
-import {
-  forwardRef,
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, In, MoreThanOrEqual, Not, Repository } from 'typeorm';
+import { In, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { StudentEntity } from '../entities/student.entity';
+import { StudentTransitionEntity } from '../entities/student-transition.entity';
 import { CreateStudentDto, FindStudentDtoQuery, UpdateStudentDto } from '../dto/student.dto';
+import { CreateStudentTransitionDto } from '../dto/student-transition.dto';
 import { instanceToPlain, plainToClass } from 'class-transformer';
 import { ExceptionHandler } from '../../../helpers/handlers/exception.handler';
 import { ContactPersonEntity } from '../entities/contact-person.entity';
 import { StorageService } from '../../../shared/storage/storage.service';
 import { Multer } from 'multer';
 import { AdditionalProgramService } from '../../additional-program/services/additional-program.service';
-import { ProgramType } from '../../../shared/enums/program-type.enum';
 import { ClassService } from '../../class/services/class.service';
 import { WeekDayEnum } from '../../../shared/enums/week-day.enum';
 import { DailyScheduleEntity } from '../../daily-schedule/entities/daily-schedule.entity';
 import { ClassType } from '../../../shared/enums/class-type.enum';
 import { ClassEntity } from '../../class/entities/class.entity';
 import { AuthUser } from '../../../shared/interfaces/auth-user.interface';
+import { TransitionStatus } from '../../../shared/enums/transition-status.enum';
+
+interface EffectiveEnrollment {
+  classes: ClassEntity[];
+  daysEnrolled: WeekDayEnum[];
+  beforeSchoolDays: WeekDayEnum[];
+  afterSchoolDays: WeekDayEnum[];
+}
 
 @Injectable()
 export class StudentService {
@@ -32,6 +33,8 @@ export class StudentService {
     private readonly repository: Repository<StudentEntity>,
     @InjectRepository(ContactPersonEntity)
     private readonly contactPersonRepository: Repository<ContactPersonEntity>,
+    @InjectRepository(StudentTransitionEntity)
+    private readonly transitionRepository: Repository<StudentTransitionEntity>,
     private readonly storageService: StorageService,
     private readonly additionalProgramService: AdditionalProgramService,
     private readonly classService: ClassService,
@@ -43,6 +46,9 @@ export class StudentService {
     return await this.repository.save(entity);
   }
 
+  // ============================================================
+  // CREATE
+  // ============================================================
   async create(
     user: AuthUser,
     dto: CreateStudentDto,
@@ -73,258 +79,174 @@ export class StudentService {
       }
 
       const additionalPrograms = await this.additionalProgramService.findByIds(dto.additionalProgramIds);
-
       const classes = await this.classService.findByIds(dto.classIds, user.campusId);
 
-      const classesTransition = await this.classService.findByIds(dto.classIdsTransition, user.campusId);
+      const { transitions: transitionsDto, classIds, additionalProgramIds, ...rest } = dto as any;
 
       const newEntity = plainToClass(StudentEntity, {
-        ...dto,
+        ...rest,
         classes,
         additionalPrograms,
-        classesTransition,
       });
-
-      console.log('Creating student with data:', newEntity);
 
       const student = await this.repository.save(newEntity);
 
-      console.log('Student created with ID:', student.id);
-
-      const studentId = student.id;
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const startFrom = student.startDateOfClasses
-        ? new Date(new Date(student.startDateOfClasses as any).setHours(0, 0, 0, 0))
-        : today;
-
-      const buildDateCondition = (baseDays: string[]) => ({
-        date: MoreThanOrEqual(startFrom),
-        day: In(baseDays),
-      });
-
-      // -------------------- ENROLLED --------------------
-      const whereEnrolled: any = {
-        planning: {
-          class: {
-            id: In(classes.map((c) => c.id)),
-            classType: ClassType.ENROLLED,
-          },
-        },
-        ...buildDateCondition(dto.daysEnrolled),
-      };
-
-      const futureSchedulesEnrolled = await this.dailyScheduleRepository.find({
-        where: whereEnrolled,
-        relations: ['students'],
-      });
-
-      const savePromisesEnrolled = futureSchedulesEnrolled
-        .filter((sched) => {
-          // No está inscrito y la fecha no supera su endDateOfClasses
-          return !sched.students.some((t) => t.id === studentId) && !this.isOutsideActiveRange(student, sched.date);
-        })
-        .map((sched) => {
-          sched.students.push(student);
-          return this.dailyScheduleRepository.save(sched);
-        });
-
-      await Promise.all(savePromisesEnrolled);
-
-      // -------------------- AFTER SCHOOL --------------------
-      if (dto.afterSchoolDays) {
-        const whereAfterSchool: any = {
-          planning: {
-            class: {
-              id: In(classes.map((c) => c.id)),
-              classType: ClassType.AFTER_SCHOOL,
-            },
-          },
-          ...buildDateCondition(dto.afterSchoolDays),
-        };
-
-        const futureSchedulesAfterSchool = await this.dailyScheduleRepository.find({
-          where: whereAfterSchool,
-          relations: ['students'],
-        });
-
-        const savePromisesAfterSchool = futureSchedulesAfterSchool
-          .filter((sched) => {
-            return !sched.students.some((t) => t.id === studentId) && !this.isOutsideActiveRange(student, sched.date);
-          })
-          .map((sched) => {
-            sched.students.push(student);
-            return this.dailyScheduleRepository.save(sched);
-          });
-
-        await Promise.all(savePromisesAfterSchool);
+      // Crear transiciones pendientes
+      if (Array.isArray(transitionsDto) && transitionsDto.length > 0) {
+        await this.createTransitionsForStudent(student, transitionsDto, user.campusId);
       }
 
-      // -------------------- BEFORE SCHOOL --------------------
-      if (dto.beforeSchoolDays) {
-        const whereBeforeSchool: any = {
-          planning: {
-            class: {
-              id: In(classes.map((c) => c.id)),
-              classType: ClassType.BEFORE_SCHOOL,
-            },
-          },
-          ...buildDateCondition(dto.beforeSchoolDays),
-        };
+      // Recargar con transiciones pendientes
+      const fullStudent = await this.repository.findOne({
+        where: { id: student.id },
+        relations: ['classes', 'transitions', 'transitions.classes'],
+      });
 
-        const futureSchedulesBeforeSchool = await this.dailyScheduleRepository.find({
-          where: whereBeforeSchool,
-          relations: ['students'],
-        });
-
-        const savePromisesBeforeSchool = futureSchedulesBeforeSchool
-          .filter((sched) => {
-            return !sched.students.some((t) => t.id === studentId) && !this.isOutsideActiveRange(student, sched.date);
-          })
-          .map((sched) => {
-            sched.students.push(student);
-            return this.dailyScheduleRepository.save(sched);
-          });
-
-        await Promise.all(savePromisesBeforeSchool);
+      if (fullStudent) {
+        await this.syncStudentInFutureSchedules(fullStudent);
       }
 
-      await this.handleStudentScheduleTransition(student);
-
-      return instanceToPlain(student);
+      return instanceToPlain(fullStudent ?? student);
     } catch (error) {
       throw new ExceptionHandler(error);
     }
   }
 
-  async handleStudentScheduleTransition(student: StudentEntity): Promise<void> {
-    if (!student.startDateOfClassesTransition || !student.daysEnrolledTransition) {
-      return;
+  private async createTransitionsForStudent(
+    student: StudentEntity,
+    transitionsDto: CreateStudentTransitionDto[],
+    campusId: number,
+  ): Promise<StudentTransitionEntity[]> {
+    const saved: StudentTransitionEntity[] = [];
+    for (const t of transitionsDto) {
+      if (!t.startDate || !Array.isArray(t.classIds) || t.classIds.length === 0) {
+        continue;
+      }
+      const classes = await this.classService.findByIds(t.classIds, campusId);
+      const entity = this.transitionRepository.create({
+        student: { id: student.id } as StudentEntity,
+        startDate: t.startDate,
+        daysEnrolled: t.daysEnrolled ?? [],
+        beforeSchoolDays: t.beforeSchoolDays ?? [],
+        afterSchoolDays: t.afterSchoolDays ?? [],
+        classes,
+        status: TransitionStatus.PENDING,
+        completedAt: null,
+      });
+      saved.push(await this.transitionRepository.save(entity));
     }
+    return saved;
+  }
 
-    const startFrom = new Date(new Date(student.startDateOfClassesTransition).setHours(0, 0, 0, 0));
-
-    // -------------------- ENROLLED --------------------
-    const whereEnrolled: any = {
-      planning: {
-        class: {
-          id: In(student.classesTransition.map((c) => c.id)),
-          classType: ClassType.ENROLLED,
-        },
-      },
-      date: MoreThanOrEqual(startFrom),
-      day: In(student.daysEnrolledTransition),
-    };
-
-    const futureSchedulesEnrolled = await this.dailyScheduleRepository.find({
-      where: whereEnrolled,
-      relations: ['students'],
-    });
-
-    const savePromisesEnrolled = futureSchedulesEnrolled
-      .filter((sched) => {
-        return !sched.students.some((t) => t.id === student.id) && !this.isAfterEndDate(student, sched.date);
-      })
-      .map((sched) => {
-        sched.students.push(student);
-        return this.dailyScheduleRepository.save(sched);
+  // ============================================================
+  // UPDATE
+  // ============================================================
+  async update(
+    user: AuthUser,
+    id: number,
+    updateData: UpdateStudentDto,
+    image?: Multer.File,
+    imageContactPrimary?: Multer.File,
+    imageContactSecondary?: Multer.File,
+  ): Promise<void> {
+    try {
+      const student = await this.repository.findOne({
+        where: { id },
+        relations: ['classes', 'transitions', 'transitions.classes'],
       });
 
-    await Promise.all(savePromisesEnrolled);
+      if (!student) {
+        throw new NotFoundException('Student not found');
+      }
 
-    // -------------------- AFTER SCHOOL --------------------
-    if (student.afterSchoolDaysTransition) {
-      const whereAfterSchool: any = {
-        planning: {
-          class: {
-            id: In(student.classesTransition.map((c) => c.id)),
-            classType: ClassType.AFTER_SCHOOL,
-          },
-        },
-        date: MoreThanOrEqual(startFrom),
-        day: In(student.afterSchoolDaysTransition),
-      };
+      if (image) {
+        updateData.image = await this.storageService.upload(image);
+      }
 
-      const futureSchedulesAfterSchool = await this.dailyScheduleRepository.find({
-        where: whereAfterSchool,
-        relations: ['students'],
-      });
+      if (updateData.endDateOfClasses === null) {
+        updateData.endDateOfClasses = null as any;
+      }
 
-      const savePromisesAfterSchool = futureSchedulesAfterSchool
-        .filter((sched) => {
-          return !sched.students.some((t) => t.id === student.id) && !this.isAfterEndDate(student, sched.date);
-        })
-        .map((sched) => {
-          sched.students.push(student);
-          return this.dailyScheduleRepository.save(sched);
+      const { contacts, additionalProgramIds, transitions: transitionsDto, classIds, ...rest } = updateData as any;
+      Object.assign(student, rest);
+
+      if (contacts) {
+        const rolesInPayload = contacts.map((c: any) => c.role);
+
+        await this.contactPersonRepository.delete({
+          student: { id },
+          role: Not(In(rolesInPayload)),
         });
 
-      await Promise.all(savePromisesAfterSchool);
-    }
+        for (const contactData of contacts) {
+          const { role } = contactData;
 
-    // -------------------- BEFORE SCHOOL --------------------
-    if (student.beforeSchoolDaysTransition) {
-      const whereBeforeSchool: any = {
-        planning: {
-          class: {
-            id: In(student.classesTransition.map((c) => c.id)),
-            classType: ClassType.BEFORE_SCHOOL,
-          },
-        },
-        date: MoreThanOrEqual(startFrom),
-        day: In(student.beforeSchoolDaysTransition),
-      };
+          if (role === 'PRIMARY' && imageContactPrimary) {
+            contactData.image = await this.storageService.upload(imageContactPrimary);
+          } else if (role === 'SECONDARY' && imageContactSecondary) {
+            contactData.image = await this.storageService.upload(imageContactSecondary);
+          }
 
-      const futureSchedulesBeforeSchool = await this.dailyScheduleRepository.find({
-        where: whereBeforeSchool,
-        relations: ['students'],
-      });
+          const existingContact = await this.contactPersonRepository.findOne({
+            where: { student: { id }, role },
+          });
 
-      const savePromisesBeforeSchool = futureSchedulesBeforeSchool
-        .filter((sched) => {
-          return !sched.students.some((t) => t.id === student.id) && !this.isAfterEndDate(student, sched.date);
-        })
-        .map((sched) => {
-          sched.students.push(student);
-          return this.dailyScheduleRepository.save(sched);
+          if (existingContact) {
+            Object.assign(existingContact, { ...contactData, student: { id } });
+            await this.contactPersonRepository.save(existingContact);
+          } else {
+            const newContact = plainToClass(ContactPersonEntity, { ...contactData, student: { id } });
+            await this.contactPersonRepository.save(newContact);
+          }
+        }
+      }
+
+      if (additionalProgramIds !== undefined) {
+        student.additionalPrograms = await this.additionalProgramService.findByIds(additionalProgramIds);
+      }
+
+      if (classIds !== undefined) {
+        student.classes = await this.classService.findByIds(classIds, user.campusId);
+      }
+
+      // ---- Transiciones ----
+      // Si vienen transitions en el payload, reemplazamos todas las PENDING.
+      // Las COMPLETED se conservan como histórico.
+      if (transitionsDto !== undefined) {
+        await this.transitionRepository.delete({
+          student: { id },
+          status: TransitionStatus.PENDING,
         });
 
-      await Promise.all(savePromisesBeforeSchool);
+        if (Array.isArray(transitionsDto) && transitionsDto.length > 0) {
+          await this.createTransitionsForStudent(student, transitionsDto, user.campusId);
+        }
+      }
+
+      if (!student.campus) {
+        student.campus = null as any;
+      }
+
+      await this.repository.save(student);
+
+      // Recargar y sincronizar
+      const fullStudent = await this.repository.findOne({
+        where: { id },
+        relations: ['classes', 'transitions', 'transitions.classes'],
+      });
+
+      if (fullStudent) {
+        await this.syncStudentInFutureSchedules(fullStudent);
+      }
+    } catch (error) {
+      console.error('Error updating student:', error);
+      throw new ExceptionHandler(error);
     }
   }
 
-  private isAfterEndDate = (student: StudentEntity, schedDate: Date | string): boolean => {
-    if (!student.endDateOfClasses) return false;
-
-    const endDate = new Date(student.endDateOfClasses as any);
-    endDate.setHours(0, 0, 0, 0);
-
-    const sched = new Date(schedDate);
-
-    return sched.getTime() > endDate.getTime();
-  };
-
-  private isOutsideActiveRange = (student: StudentEntity, schedDate: Date): boolean => {
-    const date = new Date(schedDate);
-    date.setHours(0, 0, 0, 0);
-
-    if (student.endDateOfClasses) {
-      const endDate = new Date(student.endDateOfClasses);
-      endDate.setHours(0, 0, 0, 0);
-      if (date.getTime() > endDate.getTime()) return true;
-    }
-
-    if (student.startDateOfClassesTransition) {
-      const startTransition = new Date(student.startDateOfClassesTransition);
-      startTransition.setHours(0, 0, 0, 0);
-      if (date.getTime() >= startTransition.getTime()) return true;
-    }
-
-    return false;
-  };
-
+  // ============================================================
+  // FIND
+  // ============================================================
   async findByParams(user: AuthUser, query: FindStudentDtoQuery): Promise<any[]> {
     const queryBuilder = this.repository
       .createQueryBuilder('student')
@@ -332,9 +254,12 @@ export class StudentService {
       .leftJoinAndSelect('student.contacts', 'contacts')
       .leftJoinAndSelect('student.additionalPrograms', 'additionalPrograms')
       .leftJoinAndSelect('student.classes', 'classes')
-      .leftJoinAndSelect('student.classesTransition', 'classesTransition')
       .leftJoinAndSelect('classes.campus', 'classCampus')
-      .leftJoinAndSelect('classesTransition.campus', 'classCampusTransition')
+      .leftJoinAndSelect('student.transitions', 'transitions', 'transitions.status = :pendingStatus', {
+        pendingStatus: TransitionStatus.PENDING,
+      })
+      .leftJoinAndSelect('transitions.classes', 'transitionClasses')
+      .leftJoinAndSelect('transitionClasses.campus', 'transitionClassesCampus')
       .select([
         'student',
         'campus.id',
@@ -342,11 +267,12 @@ export class StudentService {
         'contacts',
         'additionalPrograms',
         'classes',
-        'classesTransition',
         'classCampus.id',
         'classCampus.name',
-        'classCampusTransition.id',
-        'classCampusTransition.name',
+        'transitions',
+        'transitionClasses',
+        'transitionClassesCampus.id',
+        'transitionClassesCampus.name',
       ]);
 
     if (user.campusId) {
@@ -365,8 +291,7 @@ export class StudentService {
     }
 
     if (query.transitionStartOrder) {
-      queryBuilder.andWhere('student.startDateOfClassesTransition IS NOT NULL');
-      queryBuilder.addOrderBy('student.startDateOfClassesTransition', query.transitionStartOrder);
+      queryBuilder.addOrderBy('transitions.startDate', query.transitionStartOrder);
     }
 
     const students = await queryBuilder.getMany();
@@ -380,9 +305,12 @@ export class StudentService {
       .leftJoinAndSelect('student.contacts', 'contacts')
       .leftJoinAndSelect('student.additionalPrograms', 'additionalPrograms')
       .leftJoinAndSelect('student.classes', 'classes')
-      .leftJoinAndSelect('student.classesTransition', 'classesTransition')
       .leftJoinAndSelect('classes.campus', 'classCampus')
-      .leftJoinAndSelect('classesTransition.campus', 'classCampusTransition')
+      .leftJoinAndSelect('student.transitions', 'transitions', 'transitions.status = :pendingStatus', {
+        pendingStatus: TransitionStatus.PENDING,
+      })
+      .leftJoinAndSelect('transitions.classes', 'transitionClasses')
+      .leftJoinAndSelect('transitionClasses.campus', 'transitionClassesCampus')
       .select([
         'student',
         'campus.id',
@@ -390,14 +318,16 @@ export class StudentService {
         'contacts',
         'additionalPrograms',
         'classes',
-        'classesTransition',
         'classCampus.id',
         'classCampus.name',
-        'classCampusTransition.id',
-        'classCampusTransition.name',
+        'transitions',
+        'transitionClasses',
+        'transitionClassesCampus.id',
+        'transitionClassesCampus.name',
       ])
       .where('student.id = :id', { id })
       .andWhere('campus.id = :campusId', { campusId: user.campusId })
+      .orderBy('transitions.startDate', 'ASC')
       .getOne();
 
     return student ? instanceToPlain(student) : null;
@@ -412,397 +342,6 @@ export class StudentService {
     return student ? instanceToPlain(student) : null;
   }
 
-  async update(
-    user: AuthUser,
-    id: number,
-    updateData: UpdateStudentDto,
-    image?: Multer.File,
-    imageContactPrimary?: Multer.File,
-    imageContactSecondary?: Multer.File,
-  ): Promise<void> {
-    try {
-      const student = await this.repository.findOne({ where: { id }, relations: ['classes'] });
-
-      if (!student) {
-        throw new NotFoundException('Student not found');
-      }
-
-      let imageUrl: string | undefined;
-
-      if (image) {
-        imageUrl = await this.storageService.upload(image);
-        updateData.image = imageUrl;
-      }
-
-      if (updateData.endDateOfClasses === null) {
-        updateData.endDateOfClasses = null as any;
-      }
-
-      const classesIds = student.classes || [];
-      const classesTransitionIds = student.classesTransition || [];
-
-      const { contacts, additionalProgramIds, ...rest } = updateData;
-      Object.assign(student, rest);
-
-      if (contacts) {
-        const rolesInPayload = contacts.map((c) => c.role);
-
-        await this.contactPersonRepository.delete({
-          student: { id },
-          role: Not(In(rolesInPayload)),
-        });
-
-        for (const contactData of contacts) {
-          const { role } = contactData;
-
-          if (role === 'PRIMARY' && imageContactPrimary) {
-            contactData.image = await this.storageService.upload(imageContactPrimary);
-          } else if (role === 'SECONDARY' && imageContactSecondary) {
-            contactData.image = await this.storageService.upload(imageContactSecondary);
-          }
-
-          let existingContact = await this.contactPersonRepository.findOne({
-            where: {
-              student: { id },
-              role,
-            },
-          });
-
-          if (existingContact) {
-            Object.assign(existingContact, {
-              ...contactData,
-              student: { id },
-            });
-            await this.contactPersonRepository.save(existingContact);
-          } else {
-            const newContact = plainToClass(ContactPersonEntity, {
-              ...contactData,
-              student: { id },
-            });
-            await this.contactPersonRepository.save(newContact);
-          }
-        }
-      }
-
-      if (updateData.additionalProgramIds) {
-        const additionalPrograms = await this.additionalProgramService.findByIds(updateData.additionalProgramIds);
-        student.additionalPrograms = additionalPrograms;
-      }
-
-      if ((updateData.classIds !== undefined && updateData.classIds.length >= 0) || classesIds.length > 0) {
-        const classes = updateData.classIds
-          ? await this.classService.findByIds(updateData.classIds, user.campusId)
-          : classesIds;
-
-        const removedClasses = student.classes.filter((oldC) => !classes.some((newC) => newC.id === oldC.id));
-
-        const studentId = student.id;
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const startFrom = student.startDateOfClasses
-          ? new Date(new Date(student.startDateOfClasses as any).setHours(0, 0, 0, 0))
-          : today;
-
-        // El filtro ahora solo depende de startDateOfClasses
-        const dateCondition = { date: MoreThanOrEqual(startFrom) };
-
-        const addPromises: Promise<any>[] = [];
-
-        // -------------------- ENROLLED --------------------
-        if (Array.isArray(updateData.daysEnrolled)) {
-          const whereEnrolled: any = {
-            planning: {
-              class: {
-                id: In(classes.map((c) => c.id)),
-                classType: ClassType.ENROLLED,
-              },
-            },
-            ...dateCondition,
-          };
-
-          const futureSchedulesEnrolled = await this.dailyScheduleRepository.find({
-            where: whereEnrolled,
-            relations: ['students'],
-          });
-
-          for (const sched of futureSchedulesEnrolled) {
-            const isEnrolled = sched.students.some((s) => s.id === studentId);
-            const shouldBeEnrolled = student.daysEnrolled.includes(sched.day);
-            const shouldBeRemoved = this.isOutsideActiveRange(student, sched.date);
-
-            if (!isEnrolled && shouldBeEnrolled && !shouldBeRemoved) {
-              sched.students.push(student);
-              addPromises.push(this.dailyScheduleRepository.save(sched));
-            } else if (isEnrolled && (!shouldBeEnrolled || shouldBeRemoved)) {
-              sched.students = sched.students.filter((s) => s.id !== studentId);
-              addPromises.push(this.dailyScheduleRepository.save(sched));
-            }
-          }
-        }
-
-        // -------------------- AFTER SCHOOL --------------------
-        if (Array.isArray(updateData.afterSchoolDays)) {
-          const whereAfterSchool: any = {
-            planning: {
-              class: {
-                id: In(classes.map((c) => c.id)),
-                classType: ClassType.AFTER_SCHOOL,
-              },
-            },
-            ...dateCondition,
-          };
-
-          const futureSchedulesAfterSchool = await this.dailyScheduleRepository.find({
-            where: whereAfterSchool,
-            relations: ['students'],
-          });
-
-          for (const sched of futureSchedulesAfterSchool) {
-            const isEnrolled = sched.students.some((s) => s.id === studentId);
-            const shouldBeEnrolled = student.afterSchoolDays.includes(sched.day);
-            const shouldBeRemoved = this.isOutsideActiveRange(student, sched.date);
-
-            if (!isEnrolled && shouldBeEnrolled && !shouldBeRemoved) {
-              sched.students.push(student);
-              addPromises.push(this.dailyScheduleRepository.save(sched));
-            } else if (isEnrolled && (!shouldBeEnrolled || shouldBeRemoved)) {
-              sched.students = sched.students.filter((s) => s.id !== studentId);
-              addPromises.push(this.dailyScheduleRepository.save(sched));
-            }
-          }
-        }
-
-        // -------------------- BEFORE SCHOOL --------------------
-        if (Array.isArray(updateData.beforeSchoolDays)) {
-          const whereBeforeSchool: any = {
-            planning: {
-              class: {
-                id: In(classes.map((c) => c.id)),
-                classType: ClassType.BEFORE_SCHOOL,
-              },
-            },
-            ...dateCondition,
-          };
-
-          const futureSchedulesBeforeSchool = await this.dailyScheduleRepository.find({
-            where: whereBeforeSchool,
-            relations: ['students'],
-          });
-
-          for (const sched of futureSchedulesBeforeSchool) {
-            const isEnrolled = sched.students.some((s) => s.id === studentId);
-            const shouldBeEnrolled = student.beforeSchoolDays.includes(sched.day);
-            const shouldBeRemoved = this.isOutsideActiveRange(student, sched.date);
-
-            if (!isEnrolled && shouldBeEnrolled && !shouldBeRemoved) {
-              sched.students.push(student);
-              addPromises.push(this.dailyScheduleRepository.save(sched));
-            } else if (isEnrolled && (!shouldBeEnrolled || shouldBeRemoved)) {
-              sched.students = sched.students.filter((s) => s.id !== studentId);
-              addPromises.push(this.dailyScheduleRepository.save(sched));
-            }
-          }
-        }
-
-        const removePromises: Promise<any>[] = [];
-
-        for (const removedClass of removedClasses) {
-          const schedulesToRemove = await this.dailyScheduleRepository
-            .createQueryBuilder('ds')
-            .innerJoin('ds.planning', 'pl')
-            .andWhere('pl.classId = :removedClassId', { removedClassId: removedClass.id })
-            .innerJoin('ds.students', 's_filter', 's_filter.id = :studentId', { studentId })
-            .leftJoinAndSelect('ds.students', 'allStudents')
-            .getMany();
-
-          schedulesToRemove.forEach((sched) => {
-            sched.students = sched.students.filter((t) => t.id !== studentId);
-            removePromises.push(this.dailyScheduleRepository.save(sched));
-          });
-        }
-
-        await Promise.all([...addPromises, ...removePromises]);
-
-        student.classes = classes;
-      }
-
-      if (
-        (updateData.classIdsTransition !== undefined && updateData.classIdsTransition.length >= 0) ||
-        classesTransitionIds.length > 0
-      ) {
-        const classesTransition = updateData.classIdsTransition
-          ? await this.classService.findByIds(updateData.classIdsTransition, user.campusId)
-          : classesTransitionIds;
-
-        await this.handleUpdateStudentScheduleTransition(student, classesTransition, updateData);
-
-        student.classesTransition = classesTransition;
-      }
-
-      if (!student.campus) {
-        student.campus = null as any;
-      }
-
-      console.log('Updating student with ID:', student.id, 'Data:', student);
-
-      await this.repository.save(student);
-    } catch (error) {
-      console.error('Error updating student:', error);
-      throw new ExceptionHandler(error);
-    }
-  }
-
-  async handleUpdateStudentScheduleTransition(
-    student: StudentEntity,
-    classesTransition: ClassEntity[],
-    updateData: any,
-  ): Promise<void> {
-    if (!student.startDateOfClassesTransition) {
-      return;
-    }
-
-    const removedClasses = student.classesTransition?.filter(
-      (oldC) => !classesTransition.some((newC) => newC.id === oldC.id),
-    );
-
-    const studentId = student.id;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const startFrom = new Date(new Date(student.startDateOfClassesTransition).setHours(0, 0, 0, 0));
-
-    const dateCondition = { date: MoreThanOrEqual(startFrom) };
-
-    const addPromises: Promise<any>[] = [];
-
-    // -------------------- ENROLLED --------------------
-    if (Array.isArray(updateData.daysEnrolledTransition)) {
-      const whereEnrolled: any = {
-        planning: {
-          class: {
-            id: In(classesTransition.map((c) => c.id)),
-            classType: ClassType.ENROLLED,
-          },
-        },
-        ...dateCondition,
-      };
-
-      const futureSchedulesEnrolled = await this.dailyScheduleRepository.find({
-        where: whereEnrolled,
-        relations: ['students'],
-      });
-
-      for (const sched of futureSchedulesEnrolled) {
-        const isEnrolled = sched.students.some((s) => s.id === studentId);
-        const shouldBeEnrolled = student.daysEnrolledTransition.includes(sched.day);
-
-        const shouldBeRemovedByEndDate =
-          student.endDateOfClasses &&
-          new Date(sched.date).setHours(0, 0, 0, 0) > new Date(student.endDateOfClasses as any).setHours(0, 0, 0, 0);
-
-        if (!isEnrolled && shouldBeEnrolled && !shouldBeRemovedByEndDate) {
-          sched.students.push(student);
-          addPromises.push(this.dailyScheduleRepository.save(sched));
-        } else if (isEnrolled && (!shouldBeEnrolled || shouldBeRemovedByEndDate)) {
-          sched.students = sched.students.filter((s) => s.id !== studentId);
-          addPromises.push(this.dailyScheduleRepository.save(sched));
-        }
-      }
-    }
-
-    // -------------------- AFTER SCHOOL --------------------
-    if (Array.isArray(updateData.afterSchoolDaysTransition)) {
-      const whereAfterSchool: any = {
-        planning: {
-          class: {
-            id: In(classesTransition.map((c) => c.id)),
-            classType: ClassType.AFTER_SCHOOL,
-          },
-        },
-        ...dateCondition,
-      };
-
-      const futureSchedulesAfterSchool = await this.dailyScheduleRepository.find({
-        where: whereAfterSchool,
-        relations: ['students'],
-      });
-
-      for (const sched of futureSchedulesAfterSchool) {
-        const isEnrolled = sched.students.some((s) => s.id === studentId);
-        const shouldBeEnrolled = student.afterSchoolDaysTransition.includes(sched.day);
-        const shouldBeRemovedByEndDate =
-          student.endDateOfClasses &&
-          new Date(sched.date).setHours(0, 0, 0, 0) > new Date(student.endDateOfClasses as any).setHours(0, 0, 0, 0);
-
-        if (!isEnrolled && shouldBeEnrolled && !shouldBeRemovedByEndDate) {
-          sched.students.push(student);
-          addPromises.push(this.dailyScheduleRepository.save(sched));
-        } else if (isEnrolled && (!shouldBeEnrolled || shouldBeRemovedByEndDate)) {
-          sched.students = sched.students.filter((s) => s.id !== studentId);
-          addPromises.push(this.dailyScheduleRepository.save(sched));
-        }
-      }
-    }
-
-    // -------------------- BEFORE SCHOOL --------------------
-    if (Array.isArray(updateData.beforeSchoolDaysTransition)) {
-      const whereBeforeSchool: any = {
-        planning: {
-          class: {
-            id: In(classesTransition.map((c) => c.id)),
-            classType: ClassType.BEFORE_SCHOOL,
-          },
-        },
-        ...dateCondition,
-      };
-
-      const futureSchedulesBeforeSchool = await this.dailyScheduleRepository.find({
-        where: whereBeforeSchool,
-        relations: ['students'],
-      });
-
-      for (const sched of futureSchedulesBeforeSchool) {
-        const isEnrolled = sched.students.some((s) => s.id === studentId);
-        const shouldBeEnrolled = student.beforeSchoolDaysTransition.includes(sched.day);
-        const shouldBeRemovedByEndDate =
-          student.endDateOfClasses &&
-          new Date(sched.date).setHours(0, 0, 0, 0) > new Date(student.endDateOfClasses as any).setHours(0, 0, 0, 0);
-
-        if (!isEnrolled && shouldBeEnrolled && !shouldBeRemovedByEndDate) {
-          sched.students.push(student);
-          addPromises.push(this.dailyScheduleRepository.save(sched));
-        } else if (isEnrolled && (!shouldBeEnrolled || shouldBeRemovedByEndDate)) {
-          sched.students = sched.students.filter((s) => s.id !== studentId);
-          addPromises.push(this.dailyScheduleRepository.save(sched));
-        }
-      }
-    }
-
-    const removePromises: Promise<any>[] = [];
-
-    if (removedClasses) {
-      for (const removedClass of removedClasses) {
-        const schedulesToRemove = await this.dailyScheduleRepository
-          .createQueryBuilder('ds')
-          .innerJoin('ds.planning', 'pl')
-          .andWhere('pl.classId = :removedClassId', { removedClassId: removedClass.id })
-          .innerJoin('ds.students', 's_filter', 's_filter.id = :studentId', { studentId })
-          .leftJoinAndSelect('ds.students', 'allStudents')
-          .getMany();
-
-        schedulesToRemove.forEach((sched) => {
-          sched.students = sched.students.filter((t) => t.id !== studentId);
-          removePromises.push(this.dailyScheduleRepository.save(sched));
-        });
-      }
-    }
-
-    await Promise.all([...addPromises, ...removePromises]);
-  }
-
   async remove(user: AuthUser, id: number): Promise<void> {
     const deleteResult = await this.repository.delete({ id, campus: { id: user.campusId } });
     if (deleteResult.affected === 0) {
@@ -811,9 +350,13 @@ export class StudentService {
   }
 
   async findByIds(ids: number[], campusId: number): Promise<StudentEntity[]> {
-    const students = await this.repository.findBy({ id: In(ids), campus: { id: campusId } });
+    if (!ids || ids.length === 0) return [];
+    const students = await this.repository.find({
+      where: { id: In(ids), campus: { id: campusId } },
+      relations: ['classes', 'transitions', 'transitions.classes'],
+    });
 
-    return students.map((student) => instanceToPlain(student)) as StudentEntity[];
+    return students;
   }
 
   async findByClassIdAndDayEnrolled(classId: number, day: WeekDayEnum, classType: ClassType): Promise<StudentEntity[]> {
@@ -841,29 +384,35 @@ export class StudentService {
     return students;
   }
 
+  /**
+   * Devuelve los estudiantes con transiciones PENDIENTES cuya clase destino,
+   * tipo de clase y día coincidan con los parámetros recibidos.
+   */
   async findByClassIdAndDayEnrolledTransition(
     classId: number,
     day: WeekDayEnum,
     classType: ClassType,
   ): Promise<StudentEntity[]> {
     let column: string;
-
     switch (classType) {
       case ClassType.AFTER_SCHOOL:
-        column = 'student.after_school_days_transition';
+        column = 'transition.after_school_days';
         break;
       case ClassType.BEFORE_SCHOOL:
-        column = 'student.before_school_days_transition';
+        column = 'transition.before_school_days';
         break;
       case ClassType.ENROLLED:
       default:
-        column = 'student.days_enrolled_transition';
+        column = 'transition.days_enrolled';
         break;
     }
 
     const students = await this.repository
       .createQueryBuilder('student')
-      .innerJoin('student.classesTransition', 'class', 'class.id = :classId', { classId })
+      .innerJoin('student.transitions', 'transition', 'transition.status = :pendingStatus', {
+        pendingStatus: TransitionStatus.PENDING,
+      })
+      .innerJoin('transition.classes', 'transitionClass', 'transitionClass.id = :classId', { classId })
       .andWhere(`:day = ANY(string_to_array(${column}, ','))`, { day })
       .getMany();
 
@@ -873,5 +422,166 @@ export class StudentService {
   async findByFilter(filter: any): Promise<StudentEntity[]> {
     const students = await this.repository.findBy(filter);
     return students;
+  }
+
+  // ============================================================
+  // HELPERS DE TRANSICIONES
+  // ============================================================
+  /**
+   * Calcula la inscripción efectiva del estudiante a una fecha dada.
+   * - Si hay alguna transición PENDIENTE con startDate <= date, gana la de
+   *   mayor startDate (la más reciente que ya empezó).
+   * - Si no, se usa la información base del estudiante.
+   *
+   * Requiere que `student.transitions` y `student.classes` estén cargados.
+   */
+  getEffectiveEnrollmentForDate(student: StudentEntity, date: Date | string): EffectiveEnrollment {
+    const target = this.normalizeDate(date);
+
+    const pendingActive = (student.transitions ?? [])
+      .filter((t) => t.status === TransitionStatus.PENDING)
+      .filter((t) => {
+        const start = this.normalizeDate(t.startDate);
+        return start !== null && target !== null && start.getTime() <= target.getTime();
+      })
+      .sort((a, b) => this.normalizeDate(b.startDate)!.getTime() - this.normalizeDate(a.startDate)!.getTime());
+
+    if (pendingActive.length > 0) {
+      const winner = pendingActive[0];
+      return {
+        classes: winner.classes ?? [],
+        daysEnrolled: winner.daysEnrolled ?? [],
+        beforeSchoolDays: winner.beforeSchoolDays ?? [],
+        afterSchoolDays: winner.afterSchoolDays ?? [],
+      };
+    }
+
+    return {
+      classes: student.classes ?? [],
+      daysEnrolled: student.daysEnrolled ?? [],
+      beforeSchoolDays: student.beforeSchoolDays ?? [],
+      afterSchoolDays: student.afterSchoolDays ?? [],
+    };
+  }
+
+  /**
+   * Determina si un estudiante debe estar en un daily schedule específico,
+   * según su inscripción efectiva a la fecha del schedule.
+   */
+  shouldBeInDailySchedule(
+    student: StudentEntity,
+    schedDate: Date | string,
+    day: WeekDayEnum,
+    classId: number,
+    classType: ClassType,
+  ): boolean {
+    const target = this.normalizeDate(schedDate);
+    if (!target) return false;
+
+    if (student.startDateOfClasses) {
+      const sd = this.normalizeDate(student.startDateOfClasses)!;
+      if (target.getTime() < sd.getTime()) return false;
+    }
+
+    if (student.endDateOfClasses) {
+      const ed = this.normalizeDate(student.endDateOfClasses)!;
+      if (target.getTime() > ed.getTime()) return false;
+    }
+
+    const effective = this.getEffectiveEnrollmentForDate(student, target);
+    if (!effective.classes.some((c) => c.id === classId)) return false;
+
+    const dayList =
+      classType === ClassType.AFTER_SCHOOL
+        ? effective.afterSchoolDays
+        : classType === ClassType.BEFORE_SCHOOL
+          ? effective.beforeSchoolDays
+          : effective.daysEnrolled;
+
+    if (!dayList || !dayList.includes(day)) return false;
+
+    return true;
+  }
+
+  /**
+   * Reconcilia la presencia del estudiante en todos los daily schedules
+   * futuros (>= hoy) de las clases con las que tiene relación (base o
+   * transiciones), agregándolo o quitándolo según corresponda.
+   */
+  async syncStudentInFutureSchedules(student: StudentEntity): Promise<void> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const relevantClassIds = new Set<number>();
+    (student.classes ?? []).forEach((c) => relevantClassIds.add(c.id));
+    (student.transitions ?? [])
+      .filter((t) => t.status === TransitionStatus.PENDING)
+      .forEach((t) => (t.classes ?? []).forEach((c) => relevantClassIds.add(c.id)));
+
+    if (relevantClassIds.size === 0) {
+      // Aun así puede que esté inscrito en daily schedules huérfanos: limpiar
+      const orphanSchedules = await this.dailyScheduleRepository
+        .createQueryBuilder('ds')
+        .leftJoinAndSelect('ds.students', 'students')
+        .leftJoinAndSelect('ds.planning', 'planning')
+        .leftJoinAndSelect('planning.class', 'class')
+        .where('ds.date >= :today', { today })
+        .andWhere((qb) => {
+          const sub = qb
+            .subQuery()
+            .select('1')
+            .from(DailyScheduleEntity, 'ds2')
+            .innerJoin('ds2.students', 's2')
+            .where('ds2.id = ds.id')
+            .andWhere('s2.id = :studentId')
+            .getQuery();
+          return `EXISTS ${sub}`;
+        })
+        .setParameter('studentId', student.id)
+        .getMany();
+
+      for (const sched of orphanSchedules) {
+        sched.students = (sched.students ?? []).filter((s) => s.id !== student.id);
+        await this.dailyScheduleRepository.save(sched);
+      }
+      return;
+    }
+
+    const futureSchedules = await this.dailyScheduleRepository
+      .createQueryBuilder('ds')
+      .leftJoinAndSelect('ds.students', 'students')
+      .leftJoinAndSelect('ds.planning', 'planning')
+      .leftJoinAndSelect('planning.class', 'class')
+      .where('ds.date >= :today', { today })
+      .andWhere('class.id IN (:...classIds)', { classIds: Array.from(relevantClassIds) })
+      .getMany();
+
+    const ops: Promise<any>[] = [];
+
+    for (const sched of futureSchedules) {
+      if (!sched.planning || !sched.planning.class) continue;
+
+      const classId = sched.planning.class.id;
+      const classType = sched.planning.class.classType;
+      const shouldBe = this.shouldBeInDailySchedule(student, sched.date, sched.day, classId, classType);
+      const isIn = (sched.students ?? []).some((s) => s.id === student.id);
+
+      if (shouldBe && !isIn) {
+        sched.students = [...(sched.students ?? []), student];
+        ops.push(this.dailyScheduleRepository.save(sched));
+      } else if (!shouldBe && isIn) {
+        sched.students = (sched.students ?? []).filter((s) => s.id !== student.id);
+        ops.push(this.dailyScheduleRepository.save(sched));
+      }
+    }
+
+    await Promise.all(ops);
+  }
+
+  private normalizeDate(date: Date | string | null | undefined): Date | null {
+    if (!date) return null;
+    const d = new Date(date as any);
+    if (Number.isNaN(d.getTime())) return null;
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
   }
 }

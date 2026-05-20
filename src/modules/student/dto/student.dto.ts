@@ -18,6 +18,7 @@ import { RelationshipType } from '../../../shared/enums/relationship-type.enum';
 import { ToArray } from '../../../helpers/decorators/to-array.decorator';
 import { ProgramType } from '../../../shared/enums/program-type.enum';
 import { ToEmptyArray } from '../../../helpers/decorators/to-empty-array.decorator';
+import { CreateStudentTransitionDto } from './student-transition.dto';
 
 export class CreateContactPersonDto {
   @ApiProperty()
@@ -121,52 +122,32 @@ export class CreateStudentDto {
   @IsInt({ each: true })
   classIds: number[];
 
-  @ApiPropertyOptional({ type: String, format: 'date' })
-  @IsOptional()
-  // @IsDateString()
-  // @Type(() => Date)
-  @Transform(({ value }) => (value === '' ? null : value))
-  startDateOfClassesTransition?: any;
-
-  @ApiProperty({ type: [String], enum: WeekDayEnum, isArray: true })
-  @IsOptional()
-  // @ToEmptyArray()
-  @ToArray()
-  daysEnrolledTransition?: WeekDayEnum[];
-
-  @ApiPropertyOptional({ type: [String], enum: WeekDayEnum, isArray: true })
-  @IsOptional()
-  // @ToEmptyArray()
-  @ToArray()
-  beforeSchoolDaysTransition?: WeekDayEnum[];
-
-  @ApiPropertyOptional({ type: [String], enum: WeekDayEnum, isArray: true })
-  @IsOptional()
-  // @ToEmptyArray()
-  @ToArray()
-  afterSchoolDaysTransition?: WeekDayEnum[];
-
-  @ApiPropertyOptional({ type: [Number], isArray: true })
+  @ApiPropertyOptional({ type: [CreateStudentTransitionDto], isArray: true })
   @IsOptional()
   @Transform(({ value }) => {
-    const raw =
-      value == null || value === ''
-        ? []
-        : Array.isArray(value)
-          ? value
-          : typeof value === 'string'
-            ? value.split(',')
-            : [value];
-    const nums = raw
-      .map((v) => (typeof v === 'string' ? v.trim() : v))
-      .filter((v) => v !== '' && v !== null && v !== undefined)
-      .map((v) => Number(v))
-      .filter((n) => Number.isFinite(n));
-    return nums;
+    try {
+      if (value == null || value === '') return [];
+
+      if (typeof value === 'string') {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [parsed];
+      }
+
+      if (Array.isArray(value)) {
+        const flattened = value.flat();
+        return flattened.map((item) => (typeof item === 'string' ? JSON.parse(item) : item));
+      }
+
+      return [];
+    } catch (err) {
+      console.error('Failed to transform transitions:', err);
+      return [];
+    }
   })
   @IsArray()
-  @IsInt({ each: true })
-  classIdsTransition: number[];
+  @ValidateNested({ each: true })
+  @Type(() => CreateStudentTransitionDto)
+  transitions?: CreateStudentTransitionDto[];
 
   @ApiPropertyOptional({ type: [Number], isArray: true })
   @IsOptional()
@@ -285,7 +266,7 @@ export class FindStudentDtoQuery {
   @ApiProperty({
     required: false,
     enum: ['ASC', 'DESC'],
-    description: 'Ordenar por fecha de inicio de transición (solo los que la tienen)',
+    description: 'Ordenar por la fecha de inicio de la próxima transición pendiente',
   })
   @IsOptional()
   transitionStartOrder?: 'ASC' | 'DESC';

@@ -21,6 +21,7 @@ export class UserService {
   }
 
   async create(user: AuthUser, dto: CreateUserDto, image?: Multer.File): Promise<UserEntity> {
+    console.log('Creating user with data:', dto, user);
     let imageUrl: string | null = null;
 
     if (image) {

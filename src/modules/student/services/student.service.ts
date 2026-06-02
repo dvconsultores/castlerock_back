@@ -218,8 +218,14 @@ export class StudentService {
           status: TransitionStatus.PENDING,
         });
 
+        // Conservar solo las COMPLETED en el array para evitar que cascade las orphane
+        const completedTransitions = (student.transitions ?? []).filter((t) => t.status !== TransitionStatus.PENDING);
+
         if (Array.isArray(transitionsDto) && transitionsDto.length > 0) {
-          await this.createTransitionsForStudent(student, transitionsDto, user.campusId);
+          const newTransitions = await this.createTransitionsForStudent(student, transitionsDto, user.campusId);
+          student.transitions = [...completedTransitions, ...newTransitions];
+        } else {
+          student.transitions = completedTransitions;
         }
       }
 

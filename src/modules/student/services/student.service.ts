@@ -525,41 +525,40 @@ export class StudentService {
       .forEach((t) => (t.classes ?? []).forEach((c) => relevantClassIds.add(c.id)));
 
     if (relevantClassIds.size === 0) {
-      // Aun así puede que esté inscrito en daily schedules huérfanos: limpiar
+      // Aun así puede que esté inscrito en daily schedules huérfanos: limpiar.
+      // Usamos INNER JOIN con el estudiante para encontrar solo los schedules
+      // donde sigue listado, y la relation API para eliminar directamente
+      // del join table.
       const orphanSchedules = await this.dailyScheduleRepository
         .createQueryBuilder('ds')
-        .leftJoinAndSelect('ds.students', 'students')
-        .leftJoinAndSelect('ds.planning', 'planning')
-        .leftJoinAndSelect('planning.class', 'class')
+        .innerJoin('ds.students', 'stu', 'stu.id = :studentId', { studentId: student.id })
+        .innerJoin('ds.planning', 'planning')
         .where('ds.date >= :today', { today })
-        .andWhere((qb) => {
-          const sub = qb
-            .subQuery()
-            .select('1')
-            .from(DailyScheduleEntity, 'ds2')
-            .innerJoin('ds2.students', 's2')
-            .where('ds2.id = ds.id')
-            .andWhere('s2.id = :studentId')
-            .getQuery();
-          return `EXISTS ${sub}`;
-        })
-        .setParameter('studentId', student.id)
+        .select('ds.id')
         .getMany();
 
-      for (const sched of orphanSchedules) {
-        sched.students = (sched.students ?? []).filter((s) => s.id !== student.id);
-        await this.dailyScheduleRepository.save(sched);
-      }
+      await Promise.all(
+        orphanSchedules.map((s) =>
+          this.dailyScheduleRepository
+            .createQueryBuilder()
+            .relation(DailyScheduleEntity, 'students')
+            .of(s.id)
+            .remove(student.id),
+        ),
+      );
       return;
     }
 
+    const classIdsArray = Array.from(relevantClassIds);
+
+    // 1. Schedules de clases relevantes: reconciliar add/remove
     const futureSchedules = await this.dailyScheduleRepository
       .createQueryBuilder('ds')
       .leftJoinAndSelect('ds.students', 'students')
       .leftJoinAndSelect('ds.planning', 'planning')
       .leftJoinAndSelect('planning.class', 'class')
       .where('ds.date >= :today', { today })
-      .andWhere('class.id IN (:...classIds)', { classIds: Array.from(relevantClassIds) })
+      .andWhere('class.id IN (:...classIds)', { classIds: classIdsArray })
       .getMany();
 
     const ops: Promise<any>[] = [];
@@ -573,12 +572,49 @@ export class StudentService {
       const isIn = (sched.students ?? []).some((s) => s.id === student.id);
 
       if (shouldBe && !isIn) {
-        sched.students = [...(sched.students ?? []), student];
-        ops.push(this.dailyScheduleRepository.save(sched));
+        // Usar relation API para agregar directamente al join table
+        ops.push(
+          this.dailyScheduleRepository
+            .createQueryBuilder()
+            .relation(DailyScheduleEntity, 'students')
+            .of(sched.id)
+            .add(student.id),
+        );
       } else if (!shouldBe && isIn) {
-        sched.students = (sched.students ?? []).filter((s) => s.id !== student.id);
-        ops.push(this.dailyScheduleRepository.save(sched));
+        // Usar relation API para eliminar directamente del join table
+        ops.push(
+          this.dailyScheduleRepository
+            .createQueryBuilder()
+            .relation(DailyScheduleEntity, 'students')
+            .of(sched.id)
+            .remove(student.id),
+        );
       }
+    }
+
+    // 2. Remover al estudiante de daily schedules de clases que ya no son
+    //    relevantes (e.g., clase de transición eliminada).
+    //    Usamos INNER JOIN con el estudiante para encontrar solo los schedules
+    //    donde sigue listado, y la relation API para eliminar directamente
+    //    del join table sin depender de save().
+    const staleSchedules = await this.dailyScheduleRepository
+      .createQueryBuilder('ds')
+      .innerJoin('ds.students', 'stu', 'stu.id = :studentId', { studentId: student.id })
+      .innerJoin('ds.planning', 'planning')
+      .innerJoin('planning.class', 'class')
+      .where('ds.date >= :today', { today })
+      .andWhere('class.id NOT IN (:...classIds)', { classIds: classIdsArray })
+      .select('ds.id')
+      .getMany();
+
+    for (const sched of staleSchedules) {
+      ops.push(
+        this.dailyScheduleRepository
+          .createQueryBuilder()
+          .relation(DailyScheduleEntity, 'students')
+          .of(sched.id)
+          .remove(student.id),
+      );
     }
 
     await Promise.all(ops);

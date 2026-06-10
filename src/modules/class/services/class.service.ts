@@ -36,14 +36,14 @@ export class ClassService {
   async findAll(campusId?: number): Promise<ClassEntity[]> {
     return await this.repository.find({
       where: campusId ? { campus: { id: campusId } } : {},
-      relations: ['campus', 'students', 'studentsTransition', 'teachers'],
+      relations: ['campus', 'students', 'teachers'],
     });
   }
 
   async findOne(user: AuthUser, id: number): Promise<ClassEntity | null> {
     return await this.repository.findOne({
       where: { id, campus: { id: user.campusId } },
-      relations: ['campus', 'students', 'studentsTransition', 'teachers'],
+      relations: ['campus', 'students', 'teachers'],
     });
   }
 

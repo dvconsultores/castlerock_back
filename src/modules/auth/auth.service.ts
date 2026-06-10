@@ -321,6 +321,17 @@ export class AuthService {
         campusId: savedCampus.id,
       };
 
+      await this.mailService.sendEmail({
+        to: dto.email,
+        subject: 'Welcome to Stutris',
+        template: './company-registration-welcome',
+        context: {
+          companyName: dto.schoolName || 'Company',
+          supportEmail: 'success@stutris.com',
+          websiteUrl: 'https://www.stutris.com',
+        },
+      });
+
       return {
         id: savedUser.id,
         email: savedUser.email,

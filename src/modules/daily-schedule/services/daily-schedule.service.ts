@@ -66,52 +66,15 @@ export class DailyScheduleService {
 
       const allStudents = await this.studentService.findByIds(dto.studentIds, campusId);
 
-      const students = allStudents.filter((s) => {
-        const hasStart = !!s.startDateOfClasses;
-        const hasEnd = !!s.endDateOfClasses;
-        const hasStartTransition = !!s.startDateOfClassesTransition;
-
-        if (!hasStart && !hasEnd && !hasStartTransition) return true;
-
-        const sd = hasStart ? this.normalizeDate(s.startDateOfClasses) : null;
-        const ed = hasEnd ? this.normalizeDate(s.endDateOfClasses) : null;
-        const sdTransition = hasStartTransition ? this.normalizeDate(s.startDateOfClassesTransition) : null;
-
-        const schNorm = this.normalizeDate(scheduleDate);
-
-        const afterStart = !sd || schNorm!.getTime() >= sd.getTime();
-        const beforeEnd = !ed || schNorm!.getTime() <= ed.getTime();
-        const beforeStartTransition = !sdTransition || schNorm!.getTime() < sdTransition.getTime();
-
-        return afterStart && beforeEnd && beforeStartTransition;
-      });
-
-      if (dto.transitionStudentIds && dto.transitionStudentIds.length > 0) {
-        const transitionStudents = await this.studentService.findByIds(dto.transitionStudentIds, campusId);
-
-        for (const ts of transitionStudents) {
-          const hasEnd = !!ts.endDateOfClasses;
-          const hasStartTransition = !!ts.startDateOfClassesTransition;
-
-          if (!hasEnd && !hasStartTransition) {
-            students.push(ts);
-            continue;
-          }
-
-          const ed = hasEnd ? new Date(ts.endDateOfClasses as any) : null;
-          const sdTransition = hasStartTransition ? new Date(ts.startDateOfClassesTransition as any) : null;
-
-          if (ed) ed.setHours(0, 0, 0, 0);
-          if (sdTransition) sdTransition.setHours(0, 0, 0, 0);
-
-          const beforeEnd = !ed || scheduleDate.getTime() <= ed.getTime();
-          const beforeStartTransition = !sdTransition || scheduleDate.getTime() >= sdTransition.getTime();
-
-          if (beforeEnd && beforeStartTransition) {
-            students.push(ts);
-          }
-        }
-      }
+      const students = allStudents.filter((s) =>
+        this.studentService.shouldBeInDailySchedule(
+          s,
+          scheduleDate,
+          dto.day,
+          planning.class.id,
+          planning.class.classType,
+        ),
+      );
 
       const uniqueStudents = Array.from(new Map(students.map((s) => [s.id, s])).values());
 
@@ -264,51 +227,30 @@ export class DailyScheduleService {
         const allStudents = await this.studentService.findByIds(updateData.studentIds, campusId);
         if (!allStudents || allStudents.length === 0) throw new NotFoundException('Students not found');
 
-        const students = allStudents.filter((s) => {
-          const hasStart = !!s.startDateOfClasses;
-          const hasEnd = !!s.endDateOfClasses;
-          const hasStartTransition = !!s.startDateOfClassesTransition;
-
-          if (!hasStart && !hasEnd && !hasStartTransition) return true;
-
-          const sd = hasStart ? new Date(s.startDateOfClasses as any) : null;
-          const ed = hasEnd ? new Date(s.endDateOfClasses as any) : null;
-          const sdTransition = hasStartTransition ? new Date(s.startDateOfClassesTransition as any) : null;
-
-          if (sd) sd.setHours(0, 0, 0, 0);
-          if (ed) ed.setHours(0, 0, 0, 0);
-          if (sdTransition) sdTransition.setHours(0, 0, 0, 0);
-
-          const afterStart = !sd || scheduleDate.getTime() >= sd.getTime();
-          const beforeEnd = !ed || scheduleDate.getTime() <= ed.getTime();
-          const beforeStartTransition = !sdTransition || scheduleDate.getTime() <= sdTransition.getTime();
-
-          return afterStart && beforeEnd && beforeStartTransition;
-        });
+        const students = allStudents.filter((s) =>
+          this.studentService.shouldBeInDailySchedule(
+            s,
+            scheduleDate,
+            dayToUse,
+            dailyScheduleFound.planning.class.id,
+            dailyScheduleFound.planning.class.classType,
+          ),
+        );
 
         dailyScheduleFound.students = students;
       } else if (updateData.day || updateData.planningId) {
-        dailyScheduleFound.students = (dailyScheduleFound.students ?? []).filter((s) => {
-          const hasStart = !!s.startDateOfClasses;
-          const hasEnd = !!s.endDateOfClasses;
-          const hasStartTransition = !!s.startDateOfClassesTransition;
-
-          if (!hasStart && !hasEnd && !hasStartTransition) return true;
-
-          const sd = hasStart ? new Date(s.startDateOfClasses as any) : null;
-          const ed = hasEnd ? new Date(s.endDateOfClasses as any) : null;
-          const sdTransition = hasStartTransition ? new Date(s.startDateOfClassesTransition as any) : null;
-
-          if (sd) sd.setHours(0, 0, 0, 0);
-          if (ed) ed.setHours(0, 0, 0, 0);
-          if (sdTransition) sdTransition.setHours(0, 0, 0, 0);
-
-          const afterStart = !sd || scheduleDate.getTime() >= sd.getTime();
-          const beforeEnd = !ed || scheduleDate.getTime() <= ed.getTime();
-          const beforeStartTransition = !sdTransition || scheduleDate.getTime() <= sdTransition.getTime();
-
-          return afterStart && beforeEnd && beforeStartTransition;
-        });
+        // Recalcular sólo con los estudiantes ya asignados, según la nueva fecha
+        const existingIds = (dailyScheduleFound.students ?? []).map((s) => s.id);
+        const allStudents = existingIds.length ? await this.studentService.findByIds(existingIds, campusId) : [];
+        dailyScheduleFound.students = allStudents.filter((s) =>
+          this.studentService.shouldBeInDailySchedule(
+            s,
+            scheduleDate,
+            dayToUse,
+            dailyScheduleFound.planning.class.id,
+            dailyScheduleFound.planning.class.classType,
+          ),
+        );
       }
 
       if (updateData.day) {

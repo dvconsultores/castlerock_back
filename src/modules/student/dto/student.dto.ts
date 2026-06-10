@@ -78,7 +78,7 @@ export class CreateStudentDto {
 
   @ApiPropertyOptional({ type: String, format: 'date' })
   @IsOptional()
-  @IsDate()
+  @Transform(({ value }) => (value === '' ? null : value))
   @Type(() => Date)
   startDateOfClasses?: Date;
 

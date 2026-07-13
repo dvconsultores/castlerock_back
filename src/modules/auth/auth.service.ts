@@ -41,6 +41,41 @@ export class AuthService {
     private readonly stripeService: StripeService,
   ) {}
 
+  private async notifyAdminsOfNewRegistration(
+    organizationName: string,
+    contactName: string,
+    email: string,
+    phone: string,
+    planName: string,
+  ) {
+    const admins = await this.userService.findAllAdmins();
+
+    if (admins.length === 0) {
+      console.warn('No admin users found to notify about new registration');
+      return;
+    }
+
+    const adminEmails = admins.map((admin) => admin.email).join(',');
+
+    try {
+      await this.mailService.sendEmail({
+        to: adminEmails,
+        subject: 'New Organization Registration - ' + organizationName,
+        template: './admin-registration-notification',
+        context: {
+          organizationName,
+          contactName,
+          email,
+          phone,
+          plan: planName,
+        },
+      });
+      console.log('Admin notification email sent successfully');
+    } catch (error) {
+      console.error('Failed to send admin notification email:', error);
+    }
+  }
+
   private async validateUser(email: string, password: string): Promise<UserEntity | null> {
     const user = await this.userService.findOneByEmail(email);
 
@@ -313,7 +348,16 @@ export class AuthService {
       /* D. Commit */
       await queryRunner.commitTransaction();
 
-      /* E. JWT */
+      /* E. Notificar a los admins */
+      this.notifyAdminsOfNewRegistration(
+        dto.schoolName,
+        savedUser.firstName + ' ' + savedUser.lastName,
+        dto.email,
+        dto.phone || 'N/A',
+        plan.name,
+      );
+
+      /* F. JWT */
       const payload = {
         id: savedUser.id,
         email: savedUser.email,

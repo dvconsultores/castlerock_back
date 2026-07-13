@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, MoreThanOrEqual, Not, Repository } from 'typeorm';
+import { DataSource, In, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { StudentEntity } from '../entities/student.entity';
 import { StudentTransitionEntity } from '../entities/student-transition.entity';
 import { CreateStudentDto, FindStudentDtoQuery, UpdateStudentDto } from '../dto/student.dto';
@@ -625,5 +625,158 @@ export class StudentService {
     const d = new Date(date as any);
     if (Number.isNaN(d.getTime())) return null;
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  // ============================================================
+  // MIGRACIÓN DE TRANSICIONES DESDE BACKUP
+  // ============================================================
+  async migrateTransitionsFromRestore(): Promise<any> {
+    const restoreDataSource = new DataSource({
+      type: 'postgres',
+      host: process.env.HOST_ORM,
+      port: Number(process.env.PORT_ORM),
+      username: process.env.USER_ORM,
+      password: process.env.PASSWORD_ORM,
+      database: 'restore',
+      ssl: { rejectUnauthorized: false },
+    });
+
+    try {
+      await restoreDataSource.initialize();
+
+      // 1. Traer datos de transición de la tabla students del backup
+      const studentsTransitionData = await restoreDataSource.query(`
+        SELECT
+          id,
+          first_name,
+          last_name,
+          start_date_of_classes_transition,
+          days_enrolled_transition,
+          before_school_days_transition,
+          after_school_days_transition
+        FROM students
+        WHERE start_date_of_classes_transition IS NOT NULL
+           OR days_enrolled_transition IS NOT NULL
+      `);
+
+      // 2. Traer la tabla de relación many-to-many de clases de transición
+      const classesTransitionData: { studentsId: number; classesId: number }[] = await restoreDataSource.query(`
+        SELECT "studentsId", "classesId"
+        FROM students_classes_transition_classes
+      `);
+
+      await restoreDataSource.destroy();
+
+      console.log(
+        `=== MIGRACIÓN: ${studentsTransitionData.length} students con transición, ${classesTransitionData.length} relaciones clase-transición ===`,
+      );
+
+      // Agrupar clases por studentId
+      const classesMap = new Map<number, number[]>();
+      for (const rel of classesTransitionData) {
+        const list = classesMap.get(rel.studentsId) ?? [];
+        list.push(rel.classesId);
+        classesMap.set(rel.studentsId, list);
+      }
+
+      const results: any[] = [];
+
+      for (const row of studentsTransitionData) {
+        const studentId = row.id;
+
+        // Verificar que el estudiante existe en la DB actual
+        const student = await this.repository.findOne({
+          where: { id: studentId },
+          relations: ['classes', 'transitions', 'transitions.classes'],
+        });
+
+        if (!student) {
+          console.log(
+            `Student ${studentId} (${row.first_name} ${row.last_name}) no existe en la DB actual, saltando...`,
+          );
+          results.push({ studentId, name: `${row.first_name} ${row.last_name}`, status: 'SKIPPED_NOT_FOUND' });
+          continue;
+        }
+
+        // Parsear days desde simple-array (csv string)
+        const parseCsv = (val: string | null): WeekDayEnum[] => {
+          if (!val || val.trim() === '') return [];
+          return val.split(',').map((s) => s.trim()) as WeekDayEnum[];
+        };
+
+        const startDate = row.start_date_of_classes_transition;
+
+        if (!startDate) {
+          console.log(
+            `Student ${studentId} (${row.first_name} ${row.last_name}) no tiene start_date_of_classes_transition, saltando...`,
+          );
+          results.push({ studentId, name: `${row.first_name} ${row.last_name}`, status: 'SKIPPED_NO_START_DATE' });
+          continue;
+        }
+
+        const daysEnrolled = parseCsv(row.days_enrolled_transition);
+        const beforeSchoolDays = parseCsv(row.before_school_days_transition);
+        const afterSchoolDays = parseCsv(row.after_school_days_transition);
+        const transitionClassIds = classesMap.get(studentId) ?? [];
+
+        // Buscar las clases de transición en la DB actual
+        const transitionClasses =
+          transitionClassIds.length > 0
+            ? await this.repository.manager.find(ClassEntity, { where: { id: In(transitionClassIds) } })
+            : [];
+
+        // Crear la transición
+        const transition = this.transitionRepository.create({
+          student: { id: studentId } as StudentEntity,
+          startDate: startDate,
+          daysEnrolled,
+          beforeSchoolDays,
+          afterSchoolDays,
+          classes: transitionClasses,
+          status: TransitionStatus.PENDING,
+          completedAt: null,
+        });
+
+        const saved = await this.transitionRepository.save(transition);
+
+        console.log(
+          `Transición creada para student ${studentId} (${row.first_name} ${row.last_name}): id=${saved.id}, startDate=${startDate}, classes=[${transitionClassIds.join(',')}]`,
+        );
+
+        results.push({
+          studentId,
+          name: `${row.first_name} ${row.last_name}`,
+          transitionId: saved.id,
+          startDate,
+          daysEnrolled,
+          beforeSchoolDays,
+          afterSchoolDays,
+          classIds: transitionClassIds,
+          status: 'CREATED',
+        });
+
+        // Recargar el estudiante con las transiciones actualizadas y sincronizar daily schedules
+        const fullStudent = await this.repository.findOne({
+          where: { id: studentId },
+          relations: ['classes', 'transitions', 'transitions.classes'],
+        });
+
+        if (fullStudent) {
+          await this.syncStudentInFutureSchedules(fullStudent);
+          console.log(`Daily schedules sincronizados para student ${studentId}`);
+        }
+      }
+
+      return {
+        total: studentsTransitionData.length,
+        results,
+      };
+    } catch (error) {
+      if (restoreDataSource.isInitialized) {
+        await restoreDataSource.destroy();
+      }
+      console.error('Error migrando transiciones:', error);
+      throw error;
+    }
   }
 }

@@ -1,0 +1,235 @@
+<html lang='en'>
+  <head>
+    <meta charset='UTF-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+    <title>New Organization Registration</title>
+
+    <style>
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        background-color: #ffffff;
+        margin: 0;
+        padding: 0;
+        color: #000000;
+      }
+
+      .email-wrapper {
+        width: 100%;
+        background-color: #ffffff;
+        padding: 30px 0;
+      }
+
+      .outer-container {
+        max-width: 880px;
+        margin: 0 auto;
+        border: 1px solid #d5eeee;
+        border-radius: 16px;
+        padding: 18px;
+        box-sizing: border-box;
+      }
+
+      .container {
+        background-color: #f6fbfb;
+        border-radius: 14px;
+        padding: 28px 48px 34px;
+        box-sizing: border-box;
+      }
+
+      .accent-row {
+        margin-bottom: 18px;
+        font-size: 0;
+        line-height: 0;
+      }
+
+      .accent {
+        display: inline-block;
+        height: 7px;
+        border-radius: 10px;
+        margin-right: 6px;
+        vertical-align: top;
+      }
+
+      .accent.teal {
+        width: 135px;
+        background-color: #5fa6a6;
+      }
+
+      .accent.orange {
+        width: 42px;
+        background-color: #f26543;
+      }
+
+      .accent.purple {
+        width: 42px;
+        background-color: #969be8;
+      }
+
+      h1 {
+        color: #2f6f72;
+        text-align: center;
+        font-size: 27px;
+        line-height: 1.3;
+        margin: 0 0 28px;
+        font-weight: 700;
+      }
+
+      p {
+        color: #000000;
+        font-size: 16px;
+        line-height: 1.45;
+        margin: 0 0 16px;
+      }
+
+      strong {
+        font-weight: 700;
+      }
+
+      .details-box {
+        background-color: #ffffff;
+        border: 1px solid #d5eeee;
+        border-radius: 10px;
+        padding: 20px 24px;
+        margin: 20px 0 24px;
+      }
+
+      .detail-row {
+        margin-bottom: 10px;
+        font-size: 16px;
+        line-height: 1.45;
+      }
+
+      .detail-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .detail-label {
+        font-weight: 700;
+        color: #2f6f72;
+      }
+
+      .divider {
+        border: none;
+        border-top: 1px solid #d5eeee;
+        margin: 24px 0;
+      }
+
+      .signature p {
+        margin: 0 0 4px;
+      }
+
+      .footer {
+        text-align: center;
+        margin-top: 36px;
+      }
+
+      .footer p {
+        color: #2f6f72;
+        font-size: 14px;
+        line-height: 1.4;
+        margin: 0 0 4px;
+      }
+
+      @media only screen and (max-width: 700px) {
+        .email-wrapper {
+          padding: 14px 0;
+        }
+
+        .outer-container {
+          max-width: 94%;
+          padding: 10px;
+          border-radius: 12px;
+        }
+
+        .container {
+          padding: 22px 20px 28px;
+        }
+
+        h1 {
+          font-size: 23px;
+          white-space: normal;
+        }
+
+        p,
+        .detail-row {
+          font-size: 15px;
+        }
+
+        .accent.teal {
+          width: 120px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class='email-wrapper'>
+      <div class='outer-container'>
+        <div class='container'>
+
+          <div class='accent-row'>
+            <span class='accent teal'></span>
+            <span class='accent orange'></span>
+            <span class='accent purple'></span>
+          </div>
+
+          <h1>New Organization Registration</h1>
+
+          <p>Hello Team,</p>
+
+          <p>
+            Great news—we have a new childcare organization joining the Stutris family!
+          </p>
+
+          <p>
+            Please begin the onboarding process for the following customer:
+          </p>
+
+          <div class='details-box'>
+            <div class='detail-row'>
+              <span class='detail-label'>Organization:</span>
+              {{organizationName}}
+            </div>
+            <div class='detail-row'>
+              <span class='detail-label'>Primary Contact:</span>
+              {{contactName}}
+            </div>
+            <div class='detail-row'>
+              <span class='detail-label'>Email:</span>
+              {{email}}
+            </div>
+            <div class='detail-row'>
+              <span class='detail-label'>Phone:</span>
+              {{phone}}
+            </div>
+            <div class='detail-row'>
+              <span class='detail-label'>Subscription Plan:</span>
+              {{plan}}
+            </div>
+          </div>
+
+          <p>
+            Our goal is to have every new customer fully configured and confident using Stutris before their scheduled
+            go-live date.
+          </p>
+
+          <p>
+            Thank you for continuing to provide an exceptional onboarding experience. Every successful implementation
+            helps childcare programs optimize enrollment, protect revenue, and ensure every child is in their perfect
+            spot.
+          </p>
+
+          <hr class='divider' />
+
+          <div class='signature'>
+            <p><strong>— Stutris Operations</strong></p>
+          </div>
+
+          <div class='footer'>
+            <p>Stutris &mdash; Smarter Roster Planning</p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

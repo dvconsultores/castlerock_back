@@ -58,6 +58,13 @@ export class UserService {
     });
   }
 
+  async findAllAdmins(): Promise<UserEntity[]> {
+    return await this.repository.find({
+      where: { role: UserRole.ADMIN },
+      select: ['id', 'firstName', 'lastName', 'email'],
+    });
+  }
+
   async update(id: number, updateData: Partial<UserEntity>, image?: Multer.File, user?: AuthUser): Promise<void> {
     let imageUrl: string | undefined;
 

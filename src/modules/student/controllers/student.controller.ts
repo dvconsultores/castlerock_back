@@ -69,6 +69,11 @@ export class StudentController {
     );
   }
 
+  // @Get('migration/restore-transitions')
+  // async migrateTransitions() {
+  //   return this.studentService.migrateTransitionsFromRestore();
+  // }
+
   @Get()
   @UseGuards(AuthGuard)
   @ApiBearerAuth()

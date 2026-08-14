@@ -6,8 +6,12 @@ import { ConfigService } from '@nestjs/config';
 import { AppLogger } from './shared/logger/app-logger';
 import { ResponseInterceptor } from './helpers/interceptors/response.interceptor';
 import * as bodyParser from 'body-parser';
+import { existsSync } from 'node:fs';
 
-process.loadEnvFile();
+// Only load .env outside production; on Railway (production) the variables are injected into the environment.
+if (process.env.NODE_ENV !== 'production' && existsSync('.env')) {
+  process.loadEnvFile();
+}
 
 async function bootstrap() {
   const configService = new ConfigService();

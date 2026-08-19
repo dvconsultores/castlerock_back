@@ -1,0 +1,5 @@
+allowBuilds:
+  '@nestjs/core': true
+  aws-sdk: true
+  bcrypt: true
+  protobufjs: true

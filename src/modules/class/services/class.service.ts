@@ -83,6 +83,7 @@ export class ClassService {
    *    a qué clase pertenece el estudiante (gana sobre la asignación base del join).
    *  - Si no hay transición activa, la asignación base (estar en el join de esta clase)
    *    sigue vigente y el estudiante pertenece a la clase.
+   * 
    */
   private isStudentCurrentlyInClass(student: StudentEntity, classId: number, today: Date): boolean {
     // 1) Límites de fechas base de la inscripción
